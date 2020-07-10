@@ -1,0 +1,185 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+
+var lastSelectedTextField;
+function changeSelectedTextField(element){
+  lastSelectedTextField=element;
+}
+
+function insertEvent1(targetElement,justDo){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  justDo=justDo||false;
+  if(justDo || omega.MultiTriggerCheck({id:targetElement})==2){
+    top.openEventLog(omega.pageID,targetElement);
+  }
+}
+
+omega.insertEvent = function(eventData){
+  eventerReadOut();
+  if (printData.length>0 && printData[printData.length-1][0]=="" && printData[printData.length-1][1]==""){
+    printData[printData.length-1]=eventData;
+  }
+  else{
+    printData.push(eventData);
+  }
+  printEventer(printData);
+}
+
+var oldData;
+var printData;
+function printEventer(data){
+  printData=data;
+  if (typeof printData=="undefined"){
+    printData=[["",""]];
+  }
+  var content='<table border="0" cellpadding="0" cellspacing="3"><tr><td class="transparent0NH special2 text"></td><td class="transparent0NH special2 text">'+top.getText("event",0)+' (prefix.suffix)</td><td class="transparent0NH special2 text">'+top.getText("event",0)+' (payload)</td><td class="transparent0NH special2 text Cred">X</td></tr>';
+  for (var j=0; j<printData.length; j++){
+    content+='<tr id="Cine'+j+'"><td id="Cp.'+j+'.0" class="defaultNH text">'+j+'</td><td><textarea id="textArea'+j+'.1" onClick="changeSelectedTextField(this); insertEvent1(this,false);" border="0" class="w4">'+printData[j][0]+'</textarea></td><td><textarea id="textArea'+j+'.2" onClick="changeSelectedTextField(this); insertEvent1(this,false);" border="0" class="w4">'+printData[j][1]+'</textarea></td><td class="p1 w1 text default Hred" onClick="printEventerRemoveLine('+j+');">-</td></tr>';
+  }
+  content+='<tr><td class="p1 w1 text default Hgreen" onClick="printEventerAddLine();" colspan="4">+</td></tr></table>';
+  document.getElementById("content").innerHTML=content;
+}
+
+function printEventerAddLine(){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  eventerReadOut();
+  printData.push(["",""]);
+  printEventer(printData);
+}
+
+function printEventerRemoveLine(j){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  eventerReadOut();
+  printData.splice(j,1);
+  printEventer(printData);
+}
+
+function eventerReadOut(){
+  var tempLen=printData.length;
+  printData=[];
+  for (var j=0; j<tempLen; j++){
+    printData.push([document.getElementById("textArea"+j+".1").value,document.getElementById("textArea"+j+".2").value]);
+  }
+}
+
+function saveF(){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  var shouldSave=false;
+  eventerReadOut();
+  for (var j=printData.length-1; j>=0; j--){
+    if (printData[j][0]!="" || printData[j][1]!=""){
+      shouldSave=true;
+    }
+    else{
+      printData.splice(j,1);
+    }
+  }
+  var data;
+  if (shouldSave){
+    data=JSON.stringify({'method':'saveActionEventsFor','args':[encodeURIComponent("eg.plugins.SchedulGhost.RunScheduleImmediately(u'scene"+top.sceneChoosen+"',True)"),encodeURIComponent(JSON.stringify(printData))]});
+  }
+  else{
+    data=JSON.stringify({'method':'removeActionEventsFor','args':[encodeURIComponent("eg.plugins.SchedulGhost.RunScheduleImmediately(u'scene"+top.sceneChoosen+"',True)")]});
+  }
+  top.saveConfig(data);
+  oldData=printData;
+}
+
+function clearAll(){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  printEventer();
+}
+
+var oldScene=-1;
+omega.OnUpdate(function(ext){
+  if (ext=="reload" || ext=="load" && oldScene!=top.sceneChoosen){
+    oldScene=top.sceneChoosen;
+    var command={'method':'loadActionEventsFor','args':[encodeURIComponent("eg.plugins.SchedulGhost.RunScheduleImmediately(u'scene"+top.sceneChoosen+"',True)")],'callback':function(data){
+      if (!data){
+        oldData=[["",""]];
+      }
+      else{
+        oldData=JSON.parse(data);
+      }
+      printEventer(oldData);
+    }};
+    omega.Request(command);
+  }
+});
+
+omega.OnLoad(function(){
+    printEventer();
+    omega.OnBeforeUnload(function (){
+      eventerReadOut();
+      if (JSON.stringify(oldData)!=JSON.stringify(printData)){
+        if (!confirm(omega.GetText('discardUnsavedSettings'))){
+          return false;
+        }
+      }
+    });
+    if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+        return false;
+    }
+    document.getElementById("okB").innerHTML = '<button class="p1 w2 default Hgreen" onClick="saveF();">'+top.getText('saveChanges',0)+'</button>';
+    document.getElementById("clearB").innerHTML = '<button class="p1 w2 default Hred" onClick="clearAll();">'+top.getText('clearSettings',0)+'</button>';
+    document.getElementById("insertEventB").innerHTML = '<button class="p1 w3 default" onClick="insertEvent1(false,true);">'+top.getText('insertEvent',0)+'</button>';
+});
+
+</script>
+
+</head>
+
+<body>
+<center>
+<table style="width:100%;" border="0" cellpadding="0" cellspacing="0">
+    <tr valign="top" class="title">
+      <td align="right">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td><div id="insertEventB"></div></td>
+            <td class="border3"></td>
+            <td><div id="clearB"></div></td>
+            <td class="border3"></td>
+            <td><div id="okB"></div></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr align="center" valign="top">
+      <td colspan="2">
+        <table border="0" cellpadding="0" cellspacing="0" style="width:100%; max-width:600px;"><!--495-->
+          <tr align="center">
+            <td><div id="content"></div></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+</table>
+</center>
+</body>
+</html>

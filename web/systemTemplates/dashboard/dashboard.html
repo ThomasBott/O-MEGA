@@ -1,0 +1,583 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<title>Dashboard</title>
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+var dashData;
+
+var dragStarted=false;
+var slideStarted=false;
+var startId;
+var pos1x;
+var pos1y;
+var overPosA;
+var bWidth;
+var bHeight;
+var pWidth;
+var bFontSize;
+
+var buttonsPerRow=0;
+function dashboardPrinter(){
+  buttonsPerRow=Math.ceil(Math.sqrt(windowWidth*dashData.length/windowHeight));
+  var buttonsPerCol=Math.ceil(dashData.length/buttonsPerRow);
+  while (buttonsPerRow*buttonsPerCol>=dashData.length){
+    buttonsPerRow--;
+  }
+  buttonsPerRow++;
+  //buttonsPerRow=parseInt(buttonsPerRow);
+  var contentvar='<table style="width:100%" border="0" cellpadding="0" cellspacing="3"><tr>';
+  var col=0;
+  bWidth=parseInt((windowWidth-(3+3*buttonsPerRow))/buttonsPerRow);
+  bHeight=parseInt((windowHeight-(41+3*buttonsPerCol))/buttonsPerCol);
+  bFontSize=parseInt(bHeight/10);
+  if (bWidth<bHeight){
+    bFontSize=parseInt(bWidth/10);
+  }
+  pWidth=parseInt(bFontSize*5);
+  for (var i=0; i<dashData.length; i++){
+    col++;
+    contentvar+='<td id="dash_'+i+'"></td>';
+    if (col>=buttonsPerRow){
+      contentvar+='</tr><tr>';
+      col=0;
+    }
+  }
+  document.getElementById('contenter').innerHTML=contentvar+'</tr></table>';
+}
+
+var tableContentArray=[];
+function tilePrinter(){//["{\"suffix\":\"CMD.buttons\",\"payload\":{\"target\":\"7/default1/7/0\",\"targetState\":\"[toggle]\"}}", 0, 0, "", "", false],["0/winpc", 0, 10, "", "pc.png", false, -1]
+  tableContentArray=[];
+  for (var i=0; i<dashData.length; i++){
+    var tempData=dashData[i];
+    var tempElement = document.getElementById('dash_'+i);
+    var contentvar='<button id="dash_'+i+'b" class="p1 transparent0';
+    if (top.dashEditing && top.viewChoosen==top.viewRecording){
+      contentvar+=' move';
+      if (omega.IS_TOUCH_DEVICE){
+        $(tempElement).on("touchstart", dragStart);
+      }
+      $(tempElement).on("mousedown", dragStart);
+    }
+    contentvar+='" style="padding: 0px; width:'+bWidth+'px; height:'+bHeight+'px; font-size:'+bFontSize+'px;"';
+    if (top.dashEditing==false || top.viewChoosen!=top.viewRecording){
+      if (tempData[2]==10 || !tempData[5] || tempData[5]==0 || tempData[5]==1){
+        contentvar+=' onClick="runControl('+i+');"';
+      }
+      else if (tempData[5]==2){
+        if (omega.IS_TOUCH_DEVICE){
+            $(tempElement).on("touchstart", slideStart);
+        }
+        else{
+            contentvar+=' onClick="runControl('+i+');"';
+        }
+      }
+    }
+    contentvar+='></button>';
+    tempElement.innerHTML=contentvar;
+    tableContentArray[i]=buttonPrinter(i);
+  }
+}
+
+function buttonUpdate(){
+    tableContentArray=[];
+    for (var i=0; i<dashData.length; i++){
+        tableContentArray[i]=buttonPrinter(i);
+    }
+}
+
+function buttonPrinter(i){
+    var tempData=dashData[i];
+    var tempTitle;
+    var printedStatus="[?]";
+    var dayWeekMonth="";
+    if (tempData[2]==10){
+      if (tempData[0]=="scene" && tempData[6]>-1){
+        var sceneId;
+        try{
+          sceneId=top.scenesFind[tempData[6]];
+          tempTitle=top.scenesIds[sceneId][1];
+        }
+        catch(e){
+          tempTitle="";
+        }
+        if(tempTitle==""){
+          tempTitle=top.getText('scene',0)+" "+(parseInt(tempData[6])+1);
+        }
+        if (typeof sceneId=="undefined"){
+          tempTitle='<div style="color:red">->'+top.getText('broken',0)+'!<-</div>';
+        }
+        else {
+          tempTitle+="<br>{state}<br>{date}";
+          if (top.scenesIds[sceneId][2]=="[activate]"){
+            printedStatus=top.scenesIds[sceneId][2];
+          }
+          else if (top.scenes[top.scenesFindData[tempData[6]]][0]=="1"){//enabled?
+            printedStatus="[on]";
+          }
+          else{
+            printedStatus="[off]";
+          }
+          if (top.scenesNextRunTime[top.scenesFindData[tempData[6]]]==""){
+            dayWeekMonth=top.getText('never',0);
+          }
+          else{
+            var tempArr=top.scenesNextRunTime[top.scenesFindData[tempData[6]]].split(" ");
+            tempArr[0]=tempArr[0].split("-");
+            tempArr[0]=top.dateTransform(tempArr[0][2],tempArr[0][1],tempArr[0][0]);
+            dayWeekMonth=tempArr[0]+" "+tempArr[1];
+          }
+        }
+      }
+      else{
+        tempTitle=top.getText('files.json',tempData[0]);
+        if (tempTitle!="undefined"){
+          var x=top.filesIDArray[tempData[0]];
+          if (top.files[x][1]!='-' && top.files[x][1]!='hide'){
+            tempTitle=top.getText('files.json',top.files[x][1])+":<br>"+tempTitle;
+            x=top.filesIDArray[top.files[x][1]];
+          }
+        }
+        tempTitle+="<br>{state}";
+        printedStatus=top.allIndexDataGroupArray[tempData[0]];
+      }
+      if (typeof tempData[3]!="undefined" && tempData[3]!=""){
+        tempTitle=tempData[3];  
+      }
+      if (tempTitle.indexOf("{state}")!=-1){
+        tempTitle=tempTitle.replace(/{state}/g,top.rotgruen(printedStatus));
+      }
+      if (tempData[0]=="scene" && tempData[6]>-1 && tempTitle.indexOf("{date}")!=-1){
+        tempTitle=tempTitle.replace(/{date}/g,"<font style='font-size:"+(bFontSize/2)+"px;'>"+top.getText('nextRun',0)+":<br>"+dayWeekMonth+"</font>");
+      }
+    }
+    else{
+      if (!tempData[3] || tempData[3]==""){
+        tempTitle=top.convertActionText(tempData,true)+"<br>{state}";
+      }
+      else{
+        tempTitle=tempData[3];
+      }
+      if (tempTitle.indexOf("{state}")!=-1 || tempTitle.indexOf("{value}")!=-1){
+        try{
+          var tempData2=JSON.parse(tempData[0]);
+          var buttonID=tempData2["payload"]["target"];
+          if (buttonID){
+            printedStatus=top.buttonStates[buttonID]["state"];
+            tempTitle=tempTitle.replace(/{value}/g,top.buttonStates[buttonID]["value"]);
+          }
+          else if(tempData2["suffix"]=="CMD.sceneOnOff"){
+              printedStatus=top.scenesIds[top.scenesFind[tempData2["payload"]["data"]]][2];
+              if (top.scenesNextRunTime[top.scenesFindData[tempData2["payload"]["data"]]]==""){
+                dayWeekMonth=top.getText('never',0);
+              }
+              else{
+                var tempArr=top.scenesNextRunTime[top.scenesFindData[tempData2["payload"]["data"]]].split(" ");
+                tempArr[0]=tempArr[0].split("-");
+                tempArr[0]=top.dateTransform(tempArr[0][2],tempArr[0][1],tempArr[0][0]);
+                dayWeekMonth=tempArr[0]+" "+tempArr[1];
+              }
+              if (tempTitle.indexOf("{date}")!=-1){
+                tempTitle=tempTitle.replace(/{date}/g,"<font style='font-size:"+(bFontSize/2)+"px;'>"+top.getText('nextRun',0)+":<br>"+dayWeekMonth+"</font>");
+              }
+          }
+          tempTitle=tempTitle.replace(/{state}/g,top.rotgruen(printedStatus));
+        }
+        catch(e){
+          tempTitle=tempTitle.replace(/{state}/g,"");
+          tempTitle=tempTitle.replace(/{value}/g,"");
+        }
+      }
+    }
+    if (tempData[4]){
+      /*if (tempData[4].substring(0,7)="http://){
+        tempTitle+='<br><img src="'+tempData[4]+'" style="width:'+pWidth+'px;"/>';
+      }
+      else{*/
+        tempTitle+='<br><img src="/img/dashboard/'+tempData[4]+'" style="width:'+pWidth+'px;"/>';
+      //}
+    }
+    document.getElementById("dash_"+i+"b").innerHTML=tempTitle;
+    return tempTitle;
+}
+
+var windowWidth=0;
+var windowHeight=0;
+
+function getWindowSize(){
+  var windowWidthNew=parseInt(top.$(window).width());
+  var windowHeightNew=parseInt(top.$(window).height());
+  if (windowWidth!=windowWidthNew || windowHeight!=windowHeightNew){
+    windowWidth=windowWidthNew;
+    windowHeight=windowHeightNew;
+    dashboardPrinter();
+    tilePrinter();
+  }
+}
+
+function delDash(){
+  if (dragStarted){
+    dashData.splice(startId,1);
+    dragStarted=false;
+    dashboardPrinter();
+    tilePrinter();
+  }
+}
+
+var indexToExecute;
+function runControl(i){
+  var tempData = dashData[i];
+  var typ = tempData[2];
+  if (top.dashEditing==false || top.viewChoosen!=top.viewRecording){
+    if (typ==10){
+      top.openPage(tempData[0],false,top.fullscreenEnabled,true,tempData[6]);
+    }
+    else{
+      if (!tempData[5] || tempData[5]==0 || tempData[5]==2){
+        top.Request(JSON.stringify({'method':'TriggerEvent','kwargs':JSON.parse(tempData[0])}));
+      }
+      else if (tempData[5]==1){
+        indexToExecute=i;
+        omega.ShowSubmitBox({callback:runExecute,selectedObject:document.getElementById("dash_"+i)});
+        //if (confirm(top.getText("areYouSure",0))){
+        //    top.Request(JSON.stringify({'method':'TriggerEvent','kwargs':JSON.parse(tempData[0])}));
+        //}
+      }
+    }
+  }
+}
+
+function runExecute(o){
+  if (o.OK){
+    top.Request(JSON.stringify({'method':'TriggerEvent','kwargs':JSON.parse(dashData[indexToExecute][0])}));
+  }
+  $(document.getElementById("dash_"+indexToExecute)).removeClass("blinking");
+}
+
+function editDash(onOff){
+  dragStarted=false;
+  if (onOff){
+    top.dashEditing=true;
+    top.viewRecording=top.viewChoosen;
+    document.getElementById('editB').innerHTML='<button class="p1 w1 red" onClick="editDash(0);"><img src="/img/pen.gif"/></button>';
+    muellElement.innerHTML='<button class="p1 w1 transparent1NH" onClick="omega.ShowAlertBox({text:\'You need to drag the element you want to delete over this field!\',selectedObject:this});"><img src="/img/muell.gif"/></button>';
+  }
+  else{
+    if (top.dashEditing && top.viewRecording==top.viewChoosen){
+      top.userSettings["dashData"][top.viewChoosen]=dashData;
+      top.userSettings1["dashData"][top.viewChoosen]=dashData;
+      top.saveUserSettings(false);
+      top.dashEditing=false;
+      dashboardPrinter();
+    }
+    document.getElementById('editB').innerHTML='<button class="p1 w1 default" onClick="editDash(1);"><img src="/img/pen.gif"/></button>';
+    muellElement.innerHTML='';
+  }
+  tilePrinter();
+}
+
+//---------------------dragNdropStart------------------------------//
+function slideStart(event){
+  if (slideStarted==false){
+    slideStarted=true;
+    isClicked=true;
+    setTimeout("isClicked = false;",300);
+    startId=event.currentTarget.id;
+    startId=parseInt(startId.substring(5));
+    omega.preventDefault(event);
+    if (event.type=="touchstart"){
+      pos1y=event.originalEvent.touches[0].pageY;
+      pos1x=event.originalEvent.touches[0].pageX;
+    }
+    else{
+      pos1y=event.pageY;
+      pos1x=event.pageX;
+    }
+  }
+}
+
+function dragging(overPos){
+  if (dragStarted==true){
+    if (overPos>overPosA){
+      for (var i=overPosA; i<overPos; i++){          
+        //$(document.getElementById("dash_"+i)).removeClass("dragging");
+        if (overPos>startId){
+          shiftCells(i,i+1);
+        }     
+        else{
+          shiftCells(i,i);
+        }
+      }
+      shiftCells(overPos,startId);
+      overPosA=overPos;
+    }
+    else if (overPos<overPosA){
+      for (var i=overPosA; i>overPos; i--){
+        //$(document.getElementById("dash_"+i)).removeClass("dragging");
+        if (overPos<startId){
+          shiftCells(i,i-1);
+        }     
+        else{
+          shiftCells(i,i);
+        }
+      }
+      shiftCells(overPos,startId);
+      overPosA=overPos;
+    }
+  }
+}
+
+function shiftCells(i,i2){
+  document.getElementById("dash_"+i+"b").innerHTML =tableContentArray[i2];
+}
+
+var isClicked=false;
+function dragStart(event){
+  if (dragStarted==false){
+    dragStarted=true;
+    isClicked=true;
+    setTimeout("isClicked = false;",300);
+    startId=event.currentTarget.id;
+    startId=parseInt(startId.substring(5));
+    overPosA=startId;
+    omega.preventDefault(event);
+  }
+}
+
+function dragEnd(){
+  if (dragStarted==true){
+    dragStarted=false;
+    var posChange=overPosA-startId;
+    if (posChange==0){
+      if (isClicked){
+        top.userSettings["dashData"][top.viewChoosen]=dashData;
+        top.dashEditBox(startId,dashEditBoxClose);
+        $(document.getElementById("dash_"+startId)).addClass("blinking");
+      }
+    }
+    else{
+      var tempData=dashData[startId];
+      dashData.splice(startId,1);
+      dashData.splice(overPosA,0,tempData);
+      //$(document.getElementById("dash_"+overPosA)).removeClass("dragging");
+      tilePrinter();
+    }
+  }
+  else if (slideStarted==true){
+    slideStarted=false;
+    if (isClicked){
+        runControl(startId);
+    }
+    slideStop();
+  }
+}
+
+function slideStop(){
+    if (slideRunning!=""){
+        slideRunning="";
+        clearInterval(repeatEnduringEventInterval);
+        omega.EndLastEvent();
+    }
+}
+
+function dashEditBoxClose(i){
+  $(document.getElementById("dash_"+i)).removeClass("blinking");
+  dashData=top.userSettings["dashData"][top.viewChoosen];
+  tilePrinter();
+}
+
+function cancel(event){
+  if (dragStarted==true && (event.type=="touchcancel" || event.type=="touchleave" || event.target.id=="contenter")){
+    dragStarted=false;
+    tilePrinter();
+  }
+  else if (slideStarted==true && (event.type=="touchcancel")){
+    slideStarted=false;
+    slideStop();
+  }
+}
+
+var slideRunning="";
+var repeatEnduringEventInterval;
+function move(event){
+  if (dragStarted==true){
+    omega.preventDefault(event);
+    if (event.type=="touchmove"){
+      var posy=event.originalEvent.touches[0].pageY;
+      var posx=event.originalEvent.touches[0].pageX;
+    }
+    else{
+      var posy=event.pageY;
+      var posx=event.pageX;
+    }
+    var i=startId;
+    if (posy>$(muellElement).offset().top && posy<($(muellElement).offset().top+$(muellElement).height()) && posx>$(muellElement).offset().left && posx<($(muellElement).offset().left + $(muellElement).width())){
+      delDash();
+      return;
+    }
+    var tempElem1=$(document.getElementById("dash_"+i));
+    if (posy<tempElem1.offset().top){
+      var tempElem=tempElem1;
+      while(posy<tempElem.offset().top){
+        i=i-buttonsPerRow;
+        if (i<0){
+          return;
+        }
+        tempElem=$(document.getElementById("dash_"+i));
+      }
+    }
+    if(posx<tempElem1.offset().left){
+      var tempElem=tempElem1;
+      while(posx<tempElem.offset().left){
+        i--;
+        if (i<0){
+          return;
+        }
+        tempElem=$(document.getElementById("dash_"+i));
+      }
+    }
+    if (posy>(tempElem1.offset().top + tempElem1.height())){
+      var tempElem=tempElem1;
+      while(posy>(tempElem.offset().top + tempElem.height())){
+        i=i+buttonsPerRow;
+        if (i>=dashData.length){
+          return;
+        }
+        tempElem=$(document.getElementById("dash_"+i));
+      }
+    }
+    if (posx>(tempElem1.offset().left + tempElem1.width())){
+      var tempElem=tempElem1;
+      while(posx>(tempElem.offset().left + tempElem.width())){
+        i++;
+        if (i>=dashData.length){
+          return;
+        }
+        tempElem=$(document.getElementById("dash_"+i));
+      }
+    }
+    dragging(i);
+    //$(document.getElementById("dash_"+i)).addClass("dragging");
+  }
+  else if (slideStarted==true){
+    omega.preventDefault(event);
+    if (event.type=="touchmove"){
+        var posy=event.originalEvent.touches[0].pageY;
+        var posx=event.originalEvent.touches[0].pageX;
+    }
+    else{
+        var posy=event.pageY;
+        var posx=event.pageX;
+    }
+    if (slideRunning==""){
+        if (posy>(pos1y+30)){
+            slideRunning="[down]";
+        }
+        else if(posy<(pos1y-30)){
+            slideRunning="[up]";
+        }
+        else if(posx>(pos1x+30)){
+            slideRunning="[right]";
+        }
+        else if(posx<(pos1x-30)){
+            slideRunning="[left]";
+        }
+        if (slideRunning!=""){
+            var tempData = JSON.parse(dashData[startId][0]);
+            tempData["payload"]["targetState"]=slideRunning;
+            top.Request(JSON.stringify({'method':'TriggerEnduringEvent','kwargs':tempData}));
+            repeatEnduringEventInterval = setInterval(omega.RepeatEnduringEvent,1000);
+            isClicked=false;
+        }
+    }
+    else if(slideRunning=="[down]"){
+        if (posy<(pos1y+30)){
+            slideStop();
+        }
+    }
+    else if(slideRunning=="[up]"){
+        if(posy>(pos1y-30)){
+            slideStop();
+        }
+    }
+    else if(slideRunning=="[right]"){
+        if (posx<(pos1x+30)){
+            slideStop();
+        }
+    }
+    else if(slideRunning=="[left]"){
+        if(posx>(pos1x-30)){
+            slideStop();
+        }
+    }
+  }
+}
+
+//-----------------------dragNdropEnd------------------------------//
+
+omega.OnUpdate(function(ext){
+    if (ext=="reload" || ext=="load"){
+        dashData=top.userSettings["dashData"][top.viewChoosen]||[];
+        if (ext=="load"){
+          getWindowSize();
+        }
+        dashboardPrinter();
+        if (top.userSettings["lockDashboard"]){
+            tilePrinter();
+        }
+        else{
+            editDash(top.dashEditing && top.viewChoosen==top.viewRecording);
+        }
+    }
+    else{
+      buttonUpdate();
+    }
+});
+
+var muellElement;
+omega.OnLoad(function(){
+    var tempElem=document.getElementById("allContent");
+    muellElement=document.getElementById('deleteB');
+    if (omega.IS_TOUCH_DEVICE){
+        $(tempElem).on("touchend", dragEnd);
+        $(tempElem).on("touchmove", move);
+        $(tempElem).on("touchcancel", cancel);
+        $(tempElem).on("touchleave", cancel);
+    }
+    $(tempElem).on("mouseup", dragEnd);
+    $(tempElem).on("mousemove", move);
+    $(tempElem).on("mouseout", cancel);
+});
+
+</script>
+
+</head>
+
+<body onresize="getWindowSize();"  style="overflow:hidden;">
+<center>
+  <table id="allContent" style="height:100%; width:100%;" border="0" cellpadding="0" cellspacing="0">
+    <tr class="title">
+      <td align="right">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td><div id="deleteB"></div></td>
+            <td class="border3"></td>
+            <td><div id="editB"></div></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr align="center" valign="top">
+      <td align="center" colspan="2" id="contenter"></td>
+    </tr>
+  </table>
+</center>
+</body>
+</html>

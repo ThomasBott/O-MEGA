@@ -1,0 +1,159 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<title>Remote - Index</title>
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+omega.useNiceScroll=false;
+
+$(document).ready(function(){
+  if (top.touchDevice==false){ $(document.body).niceScroll({gesturezoom:false,cursorcolor:"red",cursorborder:"0px",spacebarenabled:false,enablekeyboard:false,smoothscroll:true,enablemouselockapi:false,scrollspeed:80,preservenativescrolling:false,enablemousewheel:true});
+  }
+});
+
+function dashButton(){
+  if (top.fullscreenEnabled){
+    top.$(document.getElementById('dashBoard')).hide();
+    top.$(document.getElementById('reloadSpacer')).hide();
+  }
+  else{
+    top.$(document.getElementById('dashBoard')).show();
+    top.$(document.getElementById('reloadSpacer')).show();
+  }
+  if (top.choosenFramesetPageArray['index']==top.filesIDArray["dashboard"] && (top.dashEditing==false || top.viewRecording==top.viewChoosen)){
+    if (top.fullscreenEnabled){
+      top.document.getElementById('dashBoard').innerHTML='<button class="p1 w2 green" ontouchstart="event.stopPropagation();event.preventDefault();top.openActivePage(top.filesIDArray[\'dashboard\']);" onClick="top.openActivePage(top.filesIDArray[\'dashboard\']);">'+top.getText("files.json","dashboard")+'</button>';
+    }
+    else{
+      document.getElementById('dashBoard').innerHTML='<button class="p1 w2 green" onClick="top.openActivePage(top.filesIDArray[\'dashboard\']);">'+top.getText("files.json","dashboard")+'</button>';
+    }
+    //top.frames["chooseframe"].sceneUnLoad();
+  }
+  else{
+    if (top.dashEditing){
+      if (top.fullscreenEnabled){
+        top.document.getElementById('dashBoard').innerHTML='<button class="p1 w2 red" ontouchstart="event.stopPropagation();event.preventDefault();top.openPage(\'dashboard\'); selectView(top.viewRecording);" onClick="top.openPage(\'dashboard\'); selectView(top.viewRecording);">'+top.getText("files.json","dashboard")+'</button>';
+      }
+      else{
+        document.getElementById('dashBoard').innerHTML='<button class="p1 w2 red" onClick="top.openPage(\'dashboard\'); selectView(top.viewRecording);">'+top.getText("files.json","dashboard")+'</button>';
+      }
+    }
+    else{
+      if (top.fullscreenEnabled){
+        top.document.getElementById('dashBoard').innerHTML='<button class="p1 w2 default" ontouchstart="event.stopPropagation();event.preventDefault();top.openPage(\'dashboard\');" onClick="top.openPage(\'dashboard\');">'+top.getText("files.json","dashboard")+'</button>';
+      }
+      else{
+        document.getElementById('dashBoard').innerHTML='<button class="p1 w2 default" onClick="top.openPage(\'dashboard\');">'+top.getText("files.json","dashboard")+'</button>';
+      }
+    }
+  }
+}
+
+omega.OnLoad(function(){
+  if (top.devicesLoaded && top.userSettingsLoaded && top.viewsLoaded){
+    document.getElementById('Logo').innerHTML='<img style="height:35px; display:block;" src="/img/logo25.gif" />';
+    logo();
+    document.getElementById('reloadB').innerHTML='<button class="p1 w1 default" onClick="omega.Update({mode:\'reload\'});"><img src="/img/reload4.gif" /></button>';
+    //dashButton();
+    var content='<select onChange="selectView(this.value);" class="default p1 w3" id="viewChanger">';
+    for (var y=0; y<top.views.length; y++){
+        for (var i=0; i<top.user["views"].length; i++){
+          var tempVal=top.user["views"][i];
+          if (top.views[y][0]==tempVal){
+              var tempText=top.getText('views.json',tempVal);
+              if (top.viewChoosen==tempVal){
+                content+='<option value="'+tempVal+'" selected="selected">'+tempText+'</option>';
+              }
+              else{
+                content+='<option value="'+tempVal+'">'+tempText+'</option>';
+              }
+              break;
+          }
+        }
+    }
+    document.getElementById('views').innerHTML=content+'</select>';
+    //omega.ApplyHandlerRepeat({targetId:"volumeUp",eventData:{command:"volume",targetState:"[up]"}})
+    //omega.ApplyHandlerRepeat({targetId:"volumeDown",eventData:{command:"volume",targetState:"[down]"}})
+    omega.ApplyHandlerMouseWheel({targetId:"volume",eventData:{command:"volume"}})
+    omega.deviceID=top.primHifiID;
+    top.topFrameLoaded=true;
+    top.loadRest();
+  }
+  else{
+    console.log("Devices or user settings are not loaded yet, please wait...");
+    setTimeout("omega.onLoadArray[0].func();",100);
+  }
+});
+
+function logo(){
+  if (top.globalWindowWidth>=743){
+    top.$(document.getElementById('Logo')).show(omega.GetUserSetting({name:"effectTimeSlide",global:true}));
+    //top.$(document.getElementById('logoSpacer')).show();
+  }
+  else{
+    top.$(document.getElementById('Logo')).hide(omega.GetUserSetting({name:"effectTimeSlide",global:true}));
+    //top.$(document.getElementById('logoSpacer')).hide();
+  }
+}
+
+function selectView(targetView,dontHistory){
+  dontHistory=dontHistory||false;
+  if (targetView!=top.viewChoosen){
+    if (!dontHistory){
+        top.openPageHistory.splice(1,0,["viewChanged",top.viewChoosen,""]);
+    }
+    top.viewChoosen=targetView;
+    top.primHifiID=top.views[top.viewsIDArray[targetView]][1];
+    omega.deviceID=top.primHifiID;
+    top.hifiInit();
+    document.getElementById('viewChanger').value = targetView;
+    omega.Update({mode:'reload'});
+  }
+}
+
+</script>
+</head>
+<body>
+  <table style="width:100%" border="0" cellpadding="0" cellspacing="0">
+    <tr>
+      <td style="width:1px" class="cutTop cutLeft"><div id="Logo" onClick="top.openPage('dashboard');" style="display:none"></div></td>
+  		<!--<td id="logoSpacer" class="border3d"><br></td>-->
+      <td style="width:1px">
+        <table class="stdtable" border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <!--<td class="cutTop cutLeft"><button id="volumeDown" class="p1 w1 default"><img src="/img/down2.png" /></button></td>
+            <td class="cutTop"><button id="volumeUp" class="p1 w1 default"><img src="/img/up2.png" /></button></td>-->
+            <td class="cutTop cutLeft" id="views"></td>
+          </tr>
+        </table>
+      </td>
+      <td class="border3d"><br></td>
+      <td style="width:1px">
+        <table class="stdtable" border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td class="cutTop cutLeft"><button id="volume" class="p1 w2 default" onClick="top.openPage(top.files[top.filesTargetArray['devices/'+top.primHifiID][0]][0],false,top.fullscreenEnabled);"></button></td>
+            <td class="cutTop" id="titleB" style="overflow:hidden;"></td>
+          </tr>
+        </table>
+      </td>
+      <td class="border3d"><br></td>
+      <td style="width:1px">
+        <table class="stdtable" border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td class="cutTop cutLeft" id="dashBoard"></td>
+            <td id="reloadSpacer" class="border3d cutLeft"><br></td>
+            <td class="cutTop cutLeft" id="reloadB"></td>
+            <td class="cutTop" id="fullscreenLeaver" style="display:none;"><button class="p1 w3 transparent1NH"></button></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

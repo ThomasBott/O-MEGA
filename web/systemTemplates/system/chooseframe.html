@@ -1,0 +1,401 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<title>Remote - Index</title>
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+var showHiddenScenes=false;
+top.chooseframehide=0;
+var scenesIDsLength=0;
+
+function hide(onOff){
+  onOff=onOff||0;
+  var elements=document.getElementsByClassName("hideThis");
+  var elementsLength=elements.length;
+  if (onOff==1){
+    top.chooseframehide=1;
+    for (var i=0; i<elementsLength; i++){
+      $(elements[i]).hide();
+    }
+  }
+  else{
+    top.chooseframehide=0;
+    for (var i=0; i<elementsLength; i++){
+      $(elements[i]).show();
+    }
+  }
+}
+
+function tablePrint(){
+  var contentvar='<table class="stdtable" border="0" cellpadding="0" cellspacing="0"><tr align="center"><td class="cutLeft"><button class="p2 w2 defaultNH">'+top.getText('mode',0)+':</button></td><td class="hideThis"><button class="p2 w1 defaultNH">'+top.getText('status',0)+':</button></td><td class="last hideThis"><button class="p2 w1 defaultNH">HiFi:</button></td></tr>';
+  for (var i=0; i<top.files.length; i++){
+    if (top.files[i][1]=="-" || top.files[i][1]=="hide" && top.files[i][0]=="sceneFunctions"){
+      contentvar+='<tr id="'+top.files[i][0]+'T"><td class="cutLeft"><div id="'+top.files[i][0]+'B"></div></td><td class="hideThis"><div id="'+top.files[i][0]+'S"></div></td><td class="last hideThis"><div id="'+top.files[i][0]+'H"></div></td></tr>';
+    }
+  }
+  contentvar+='<tr style="height:3px;"></tr><tr style="height:3px;" class="green"><td></td><td class="hideThis"></td><td class="hideThis"></td></tr></table>';
+  document.getElementById('content').innerHTML = contentvar;
+}
+
+omega.OnUpdate(function(ext){
+  if (ext=="reload"){
+    //tablePrint();
+    timeUpdate();
+  }
+  var noPage=true;
+  for (var i=0; i<top.files.length; i++){
+    if ((top.viewChoosen=="-" || top.files[i][10].indexOf(top.viewChoosen)!=-1 || top.files[i][0]=="sceneFunctions") && (top.files[i][1]=="-" || top.files[i][1]=="hide" && (top.files[i][0]=="sceneFunctions" && top.recording && top.conditionMode==false))){
+      $(document.getElementById(top.files[i][0]+'T')).show();
+      var tempText=top.getText('files.json',top.files[i][0]);
+      if (i==top.choosenFramesetPageArray['index']){
+        document.getElementById(top.files[i][0]+'B').innerHTML='<button class="p1 w2 left green" onClick="top.openActivePage('+i+');">'+tempText+':</button>';
+        sceneLoad(ext);
+        if (top.files[i][3].substr(0,1)=="/"){//internal pages only
+          parent.frames[top.files[i][6]].omega.update(ext);
+        }
+        noPage=false;
+      }
+      else{
+        document.getElementById(top.files[i][0]+'B').innerHTML='<button class="p1 w2 left default" onClick="top.openPage(\''+top.files[i][0]+'\');">'+tempText+':</button>';
+      }
+      document.getElementById(top.files[i][0]+'S').innerHTML = '<button class="p1 w1 defaultNH">'+top.rotgruen(top.allIndexDataGroupArray[top.files[i][0]])+'</button>';
+      if (typeof top.files[i][4][top.primHifiID]!="undefined" && top.files[i][4][top.primHifiID][0]!="" && typeof top.States["devices"][top.primHifiID]["input"]!="undefined"){
+        if (i==top.filesTargetArray['devices/'+top.primHifiID][0] && top.hifiUsedInputs.indexOf(top.States["devices"][top.primHifiID]["input"])==-1){
+          document.getElementById(top.files[i][0]+'H').innerHTML = '<button class="p1 w1 green" onClick="top.openPage(\''+top.files[top.filesTargetArray['devices/'+top.primHifiID][0]][0]+'\')"></button>';
+        }
+        else if (top.files[i][4][top.primHifiID].length>1){
+          var tempPro=true;
+          for (var j=0;j<top.files[i][4][top.primHifiID].length;j++){
+            if (top.files[i][4][top.primHifiID][j]==top.States["devices"][top.primHifiID]["input"]){
+              document.getElementById(top.files[i][0]+'H').innerHTML = '<button class="p1 w1 green" onClick="top.openPage(\''+top.files[i][0]+'\');"></button>';
+              tempPro=false;
+              break;
+            }
+          }
+          if (tempPro){
+            document.getElementById(top.files[i][0]+'H').innerHTML = '<button class="p1 w1 default" onClick="top.openPage(\''+top.files[i][0]+'\');"></button>';
+          }
+        }
+        else{
+          if (top.files[i][4][top.primHifiID][0]==top.States["devices"][top.primHifiID]["input"]){
+            document.getElementById(top.files[i][0]+'H').innerHTML = '<button class="p1 w1 green" onClick="top.Request(JSON.stringify({\'method\':\'TriggerEvent\',\'kwargs\':{\'suffix\':\'EXT.'+top.devices[top.devicesIDArray[top.primHifiID]][3]+'.devices.'+top.devices[top.devicesIDArray[top.primHifiID]][1]+'.input\',\'payload\':{\'target\':\''+top.primHifiID+'\',\'targetState\':\'[value]\',\'targetValue\':[\''+top.files[i][4][top.primHifiID][0]+'\'],\'data\':{\'inputId\':\''+top.files[i][4][top.primHifiID][0]+'\'}}}}));"></button>';
+          }
+          else{
+            document.getElementById(top.files[i][0]+'H').innerHTML = '<button class="p1 w1 default" onClick="top.Request(JSON.stringify({\'method\':\'TriggerEvent\',\'kwargs\':{\'suffix\':\'EXT.'+top.devices[top.devicesIDArray[top.primHifiID]][3]+'.devices.'+top.devices[top.devicesIDArray[top.primHifiID]][1]+'.input\',\'payload\':{\'target\':\''+top.primHifiID+'\',\'targetState\':\'[value]\',\'targetValue\':[\''+top.files[i][4][top.primHifiID][0]+'\'],\'data\':{\'inputId\':\''+top.files[i][4][top.primHifiID][0]+'\'}}}}));"></button>';
+          }
+        }
+      }
+      else{
+        document.getElementById(top.files[i][0]+'H').innerHTML = '<button class="p1 w1 transparent1NH"></button>';
+      }
+    }
+    else if(top.files[i][0]=="sceneFunctions" && top.recording && top.conditionMode==true){
+      var tempText=top.getText('files.json',top.files[i][0]);
+      document.getElementById(top.files[i][0]+'B').innerHTML = '<button class="p1 w2 left default" onClick="top.showSceneConditionBox2({})">'+tempText+':</button>';
+      document.getElementById(top.files[i][0]+'S').innerHTML = '<button class="p1 w1 defaultNH">'+top.rotgruen(top.allIndexDataGroupArray[top.files[i][0]])+'</button>';
+      document.getElementById(top.files[i][0]+'H').innerHTML = '<button class="p1 w1 transparent1NH"></button>';
+    }
+    else if(top.files[i][1]=="hide"){
+      if (i==top.choosenFramesetPageArray['index'] && top.loadedFiles[i]){
+        if (top.files[i][3].substr(0,1)=="/"){//internal pages only
+          //parent.frames[top.files[i][6]].omega.update(ext);????????????
+        }
+        //sceneLoad(ext);
+      }
+      $(document.getElementById(top.files[i][0]+'T')).hide();
+    }
+    else{
+      $(document.getElementById(top.files[i][0]+'T')).hide();
+    }
+  }
+  if(noPage){
+    var newPage=top.files[top.choosenFramesetPageArray['index']][0];
+    if (newPage=="dashboard" || newPage=="eventLog" || (newPage=="scene" || newPage=="sceneFunctions") && (top.viewChoosen=="-" || top.scenesIds[top.scenesFind[top.sceneChoosen]][8].indexOf(top.viewChoosen)!=-1)){
+    }
+    else{
+      omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+      top.openPage("dashboard",newPage=="scene");
+    }
+    sceneLoad(ext);
+  }
+});
+
+//-------------------------scene_start-------------------------------//
+
+function sceneOnRecord(nr){
+  if (nr>=0){
+    recordButtonContent='<button class="p1 w2 left red" onClick="top.sceneRecordEnd(true,\''+nr+'\');">';
+    if (top.scenesIds[top.scenesFind[nr]][1]==""){
+      recordButtonContent+=top.getText('scene',0)+'&nbsp;'+(nr+1)+':</button>';
+    }
+    else{
+      recordButtonContent+=top.scenesIds[top.scenesFind[nr]][1]+':</button>';
+    }
+    try{
+      document.getElementById('scene'+top.scenesFind[nr]).innerHTML=recordButtonContent;
+    }
+    catch(e){
+    }
+  }
+  else if (top.sceneRecording!=-1){
+    nr=-1;
+  }
+  top.sceneRecording=nr;
+}
+
+function sceneButtonName(tempId){
+  if (top.scenesIds[top.scenesFind[tempId]][1]==""){
+    return top.getText('scene',0)+'&nbsp;'+(parseInt(tempId)+1);
+  }
+  else{
+    return top.scenesIds[top.scenesFind[tempId]][1];
+  }
+}
+
+function sceneLoad(ext){
+  //if (top.viewChoosen=="-"){
+    $(document.getElementById('sceneContainer')).show();
+    //if (ext=="load" || ext=="reload" || top.scenesIds.length!=scenesIDsLength){//needs to be deactivated because of the hide option
+      var sceneContainerContent='<table class="stdtable" border="0" cellpadding="0" cellspacing="0">';
+      var sceneContainerContentHidden="";
+      if (typeof top.scenes!="undefined"){
+        scenesIDsLength=top.scenesIds.length;
+        for (var i=0; i<scenesIDsLength; i++){
+          if (top.viewChoosen=="-" || top.scenesIds[i][8].indexOf(top.viewChoosen)!=-1){
+              var tempId=top.scenesIds[i][0];
+              if(top.scenesIds[i][3]==0){
+                sceneContainerContent+='<tr><td class="cutLeft"><div id="scene'+i+'"></div></td><td class="hideThis"';
+                if (top.chooseframehide==1){
+                  sceneContainerContent+=' style="display:none;"';
+                }
+                sceneContainerContent+='><div id="sceneState'+i+'"></div></td>';
+                if (top.user["parameters"]["isSceneEditor"] && top.scenesIds[i][7]==0){
+                    sceneContainerContent+='<td class="last hideThis"';
+                    if (top.chooseframehide==1){
+                      sceneContainerContent+=' style="display:none;"';
+                    }
+                    sceneContainerContent+='><button class="p1 w1 defaultNH Hred" onClick="top.submitBox(top.getText(\'sceneRemove\',0)+\'<br>('+sceneButtonName(tempId)+')\',function(o){top.sceneRemove(o.OK,'+tempId+')});">-</button></td>';
+                }
+                sceneContainerContent+='</tr><tr class="hideThis"';
+                if (top.chooseframehide==1){
+                  sceneContainerContent+=' style="display:none;"';
+                }
+                sceneContainerContent+='><td class="smallSmallText right cutLeft last" colspan="3"><div id="sceneInfo'+i+'"></div></td></tr>';
+              }
+              else if(showHiddenScenes){
+                sceneContainerContentHidden+='<tr><td class="cutLeft"><div id="scene'+i+'"></div></td><td class="hideThis"';
+                if (top.chooseframehide==1){
+                  sceneContainerContentHidden+=' style="display:none;"';
+                }
+                sceneContainerContentHidden+='><div id="sceneState'+i+'"></div></td>';
+                if (top.user["parameters"]["isSceneEditor"] && top.scenesIds[i][7]==0){
+                    sceneContainerContentHidden+='<td class="last hideThis"';
+                    if (top.chooseframehide==1){
+                      sceneContainerContentHidden+=' style="display:none;"';
+                    }
+                    sceneContainerContentHidden+='><button class="p1 w1 defaultNH Hred" onClick="top.submitBox(top.getText(\'sceneRemove\',0)+\'<br>('+sceneButtonName(tempId)+')\',function(o){top.sceneRemove(o.OK,'+tempId+')});">-</button></td>';
+                }
+                sceneContainerContentHidden+='</tr><tr class="hideThis"';
+                if (top.chooseframehide==1){
+                  sceneContainerContentHidden+=' style="display:none;"';
+                }
+                sceneContainerContentHidden+='><td class="smallSmallText right cutLeft last" colspan="3"><div id="sceneInfo'+i+'"></div></td></tr>';
+              }
+           }
+        }
+      }
+      if (top.user["parameters"]["isSceneEditor"]){
+          sceneContainerContent+='<tr>';
+          if (top.user["parameters"]["isAdmin"]){
+              sceneContainerContent+='<td class="cutLeft"><button class="p1 w2 ';
+              if(showHiddenScenes){
+                sceneContainerContent+='green" onClick="showHiddenScenesF(false);"';
+              }
+              else{
+                sceneContainerContent+='default" onClick="showHiddenScenesF(true);"';
+              }
+              sceneContainerContent+='>'+top.getText('showHidden',0)+'</button></td>';
+          }
+          else{
+            sceneContainerContent+='<td class="cutLeft"><button class="p1 w2 transparent1NH"></button></td>';
+          }
+          sceneContainerContent+='<td class="last hideThis" colspan="2"';
+          if (top.chooseframehide==1){
+            sceneContainerContent+=' style="display:none;"';
+          }
+          sceneContainerContent+='><button class="p1 w2 defaultNH Hgreen" onClick="sceneNew();">+ '+top.getText('addScene',0)+'</button></td></tr>';
+          if(showHiddenScenes){
+            sceneContainerContent+='<tr style="height:3px;"></tr><tr style="height:3px;" class="green"><td></td><td class="hideThis"';
+            if (top.chooseframehide==1){
+              sceneContainerContent+=' style="display:none;"';
+            }
+            sceneContainerContent+='></td><td class="hideThis"';
+            if (top.chooseframehide==1){
+              sceneContainerContent+=' style="display:none;"';
+            }
+            sceneContainerContent+='></td></tr>'+sceneContainerContentHidden;
+          }
+      }
+      document.getElementById('sceneContainer').innerHTML =sceneContainerContent+'</table>';
+    //}
+    for (var i=0; i<scenesIDsLength; i++){
+      if (top.viewChoosen=="-" || top.scenesIds[i][8].indexOf(top.viewChoosen)!=-1){
+          var tempId=top.scenesIds[i][0];
+          if (typeof top.scenesFindData[tempId]!="undefined"){
+            if(showHiddenScenes || top.scenesIds[i][3]==0){
+              if (top.files[top.choosenFramesetPageArray['index']][0]=="scene" && top.sceneChoosen==tempId && (!top.recording || top.sceneRecording!=tempId)){
+                buttonContent='<button class="p1 w2 left green" onClick="top.openActivePage('+top.filesIDArray['scene']+');">';
+                if (top.scenesIds[top.scenesFind[tempId]][1]==""){
+                  buttonContent+=top.getText('scene',0)+'&nbsp;'+(parseInt(tempId)+1)+':</button>';
+                }
+                else{
+                  buttonContent+=top.scenesIds[top.scenesFind[tempId]][1]+':</button>';
+                }
+                parent.frames['default'].omega.update(ext);
+              }
+              else{
+                buttonContent='<button class="p1 w2 left default" onClick="top.openPage(\'scene\',false,false,true,'+tempId+');">'+sceneButtonName(tempId)+':</button>';
+              }
+              document.getElementById('scene'+i).innerHTML=buttonContent;
+              var printedStatus="[off]";
+              if (top.scenesIds[i][2]=="[activate]"){
+                printedStatus=top.scenesIds[i][2];
+              }
+              else if (top.scenes[top.scenesFindData[tempId]][0]=="1"){//enabled?
+                printedStatus="[on]";
+              }
+              if (top.user["parameters"]["isSceneEditor"] && top.scenesIds[i][7]==0){
+                document.getElementById('sceneState'+i).innerHTML ='<button class="p1 w1 defaultNH">'+top.rotgruen(printedStatus)+'</button>';
+              }
+              else{
+                document.getElementById('sceneState'+i).innerHTML ='<button class="p1 w2 defaultNH">'+top.rotgruen(printedStatus)+'</button>';
+              }
+              var dayWeekMonth;
+              if (top.scenesNextRunTime[top.scenesFindData[tempId]]==""){
+                dayWeekMonth=top.getText('nextRun',0)+": "+top.getText('never',0);
+              }
+              else{
+                var tempArr=top.scenesNextRunTime[top.scenesFindData[tempId]].split(" ");
+                tempArr[0]=tempArr[0].split("-");
+                tempArr[0]=top.dateTransform(tempArr[0][2],tempArr[0][1],tempArr[0][0]);
+                dayWeekMonth=top.getText('nextRun',0)+": "+tempArr[0]+" "+tempArr[1];
+              }
+              document.getElementById('sceneInfo'+i).innerHTML =dayWeekMonth;
+            }
+            else if (top.files[top.choosenFramesetPageArray['index']][0]=="scene" && top.sceneChoosen==tempId && (!top.recording || top.sceneRecording!=tempId)){
+              parent.frames['default'].omega.update(ext);
+            }
+          }
+          sceneOnRecord(top.sceneRecording);
+      }
+    }
+  //}
+  //else{
+  //  $(document.getElementById('sceneContainer')).hide();
+  //}
+  if (top.loadedFiles[top.filesIDArray["dashboard"]] && top.choosenFramesetPageArray['index']==top.filesIDArray["dashboard"]){
+    parent.frames["default"].omega.update(ext);
+  }
+}
+
+function sceneNew(){
+  var command={"method":"sceneNew","args":[top.viewChoosen]};
+  omega.Request(command);
+}
+
+function showHiddenScenesF(show){
+  showHiddenScenes=show;
+  sceneLoad('load');
+}
+//--------------------------------scene_end----------------------------------//
+var clockInterval;
+function timeUpdate(){
+  var command={"method":"getTimestamp","callback":function(data){
+    if (typeof data === 'object'){
+        timeArr=data;
+    }
+    else{
+        timeArr=JSON.parse(data);
+    }
+    timeArr[5]=parseInt(timeArr[5])+1;
+    timeArr[4]=parseInt(timeArr[4]);
+    if (timeArr[4]<10){
+      timeArr[4]="0"+timeArr[4];
+    }
+    count();
+    clearInterval(clockInterval);
+    clockInterval=window.setInterval("count();",1000);
+  }};
+  omega.Request(command);
+}
+
+function count(){
+  if (timeArr[5]>=60){
+    timeArr[5]=0;
+    timeArr[4]++;
+    if(timeArr[4]>=60){
+      timeArr[4]=0;
+      timeArr[3]++;
+      if (timeArr[3]>=24){
+        timeArr[3]=0;
+      }
+      timeUpdate();
+    }
+    else{
+      timeArr[4]=top.addZeroToTime(timeArr[4]);
+    }
+  }
+  printTime();
+}
+ 
+function printTime(){
+  timeArr[5]=top.addZeroToTime(timeArr[5]);
+  document.getElementById('time').innerHTML ="<u>"+top.getText('servertime',0)+":</u> "+top.dateTransform(timeArr[0],timeArr[1],timeArr[2])+"<br>"+top.getText('itIs',0)+timeArr[3]+":"+timeArr[4]+":"+timeArr[5]+top.getText('clock',0);
+  timeArr[5]++;
+}
+
+omega.OnLoad(function(ext){
+  if (top.filesLoaded&&top.indexLoaded&&top.dictLoaded&&top.userSettingsLoaded&&top.viewsLoaded){
+    tablePrint();
+    top.chooseFrameLoaded=true;
+    top.loadRest();
+    timeUpdate();
+    document.getElementById('title').innerHTML=top.getText('mainMenu',0)+":";
+  }
+  else{
+    console.log("Files are not loaded yet, please wait...");
+    setTimeout("omega.onLoadArray[0].func();",100);
+  }
+});
+
+
+</script>
+
+</head>
+
+<body style="overflow-x:hidden;">
+<div style="position:fixed;" class="hideBackground" id="title"></div>
+<div style="position:fixed;" id="hideB"></div>
+<table border="0" cellpadding="0" cellspacing="0">
+  <tr class="shrinkH">
+    <td class="noBorder p1" valign="top"></td>
+  </tr>
+  <tr valign="top">
+    <td align="left" id="content"></td>
+  </tr>
+  <tr valign="top">
+    <td align="left" id="sceneContainer"></td>
+  </tr>
+  <tr class="hideThis" class="HSpace"><td><br></td></tr>
+  <tr class="hideThis">
+    <td id="time" class="smallText" align="right"></td>
+  </tr>
+</table>
+</body>
+</html>

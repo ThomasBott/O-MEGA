@@ -1,0 +1,109 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<title>Default</title>
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/jquery.md5.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+function userChooserPrint(){
+  var contentStr='<table class="stdtable" border="0" cellpadding="0" cellspacing="0"><tr><td colspan="2"><button class="p2 w4 defaultNH">'+top.getText("changeUser","currentUser")+':</button></td></tr><tr><td colspan="2" id="userChooser"></td></tr><tr><td><button class="p1 w2 default Hgreen" onClick="loginPrompt();">'+top.getText('changeUser','login')+'...</button></td><td><button class="p1 w2 default Hred" onClick="changePWPrompt();">'+top.getText('changeUser','changePW')+'...</button></td></tr></table>';
+  document.getElementById("userChooserContent").innerHTML=contentStr;
+  userChooserValuePrint();
+}
+
+function userChooserValuePrint(newVal){
+  var content='<select class="default p1 w4" id="currentUser">';
+  for (var i=0; i<top.users.length; i++){
+    var tempVal=top.users[i][0];
+    var tempText=top.text['users.jsonnames'][tempVal]||tempVal;
+    if (top.user["id"]==tempVal){
+      content+='<option value="'+tempVal+'" selected="selected">'+tempText+'</option>';
+    }
+    else{
+      content+='<option value="'+tempVal+'">'+tempText+'</option>';
+    }
+  }
+  document.getElementById('userChooser').innerHTML=content+'</select>';
+}
+
+function loginPrompt(){
+  top.showInputBox("",top.getText('changeUser','password')+":",loginPromptCallbackF(),"",{"type":"password"});
+}
+
+function loginPromptCallbackF(){
+  return function (data){
+    if (data.OK){
+        top.saveLoginSettings(document.getElementById("currentUser").value,data.data,function(){top.location.reload();});
+    }
+  };
+}
+
+var tempOldPW="";
+var tempNewPW="";
+
+function changePWPrompt(){
+  top.showInputBox("",top.getText('changeUser','oldPassword')+":",function (data){
+    if (data.OK){
+        tempOldPW = data.data;
+        if ($.md5(tempOldPW) == top.users[top.usersIDArray[document.getElementById("currentUser").value]][1]){
+            top.showInputBox("",top.getText('changeUser','newPassword')+":",function (data){
+              if (data.OK){
+                tempNewPW = data.data;
+                top.showInputBox("",top.getText('changeUser','retypePassword')+":",changePWPromptCallbackF(),"",{"type":"password"});
+              }
+            },"",{"type":"password"});
+        }
+    }
+  },"",{"type":"password"});
+}
+
+function changePWPromptCallbackF(){
+    return function (data){
+      if (data.OK){
+        if(data.data == tempNewPW){
+          var command={"method":"changePassword","args":[document.getElementById("currentUser").value,$.md5(tempOldPW),$.md5(tempNewPW)],"callback":function(data){
+            if(JSON.parse(data)){
+                if(top.user["id"]==document.getElementById("currentUser").value){
+                    top.saveLoginSettings(document.getElementById("currentUser").value,tempNewPW,function(){top.location.reload();});
+                }
+            }
+          }};
+          omega.Request(command);
+        }
+      }
+    };
+}
+
+omega.OnUpdate(function(ext){
+  if (ext=="reload"){
+    userChooserValuePrint(top.user["id"]);
+  }
+});
+
+omega.OnLoad(function(){
+  userChooserPrint();
+});
+
+</script>
+
+</head>
+
+<body>
+<center>
+<table style="height:100%; width:100%;" border="0" cellpadding="0" cellspacing="0">
+    <tr valign="top" class="title">
+    </tr>
+    <tr align="center" valign="top">
+      <td align="center" id="userChooserContent" ></td>
+    </tr>
+</table>
+</center>
+</body>
+</html>

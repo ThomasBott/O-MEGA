@@ -1,0 +1,298 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+var lastSelectedTextField;
+function changeSelectedTextField(element){
+  lastSelectedTextField=element;
+}
+
+function insertEvent1(targetElement,justDo){
+  justDo=justDo||false;
+  if(justDo || omega.MultiTriggerCheck({id:targetElement})==2){
+    top.openEventLog(omega.pageID,targetElement);
+  }
+}
+
+omega.insertEvent=function (eventData){
+  eventerReadOut();
+  if (printData[printData.length-1][0]=="" && printData[printData.length-1][1]==""){
+    printData[printData.length-1]=eventData;
+  }
+  else{
+    printData.push(eventData);
+  }
+  printEventer(printData);
+}
+
+
+var printData;
+function printEventer(data){
+  printData=data;
+  if (typeof printData=="undefined"){
+    printData=[["",""]];
+  }
+  var content='<table border="0" cellpadding="0" cellspacing="3"><tr><td class="transparent0NH special2 text"></td><td class="transparent0NH special2 text">'+top.getText("event",0)+' (prefix.suffix)</td><td class="transparent0NH special2 text">'+top.getText("event",0)+' (payload)</td><td class="transparent0NH special2 text Cred">X</td></tr>';
+  for (var j=0; j<printData.length; j++){
+    content+='<tr id="Cine'+j+'"><td id="Cp.'+j+'.0" class="defaultNH text">'+j+'</td><td><textarea id="textArea'+j+'.1" onClick="changeSelectedTextField(this); insertEvent1(this,false);" border="0" class="w4">'+printData[j][0]+'</textarea></td><td><textarea id="textArea'+j+'.2" onClick="changeSelectedTextField(this); insertEvent1(this,false);" border="0" class="w4">'+printData[j][1]+'</textarea></td><td class="p1 w1 text default Hred" onClick="printEventerRemoveLine('+j+');">-</td></tr>';
+  }
+  content+='<tr><td class="p1 w1 text default Hgreen" onClick="printEventerAddLine();" colspan="4">+</td></tr></table>';
+  document.getElementById("eventContent").innerHTML=content;
+}
+
+function printEventerAddLine(){
+  eventerReadOut();
+  printData.push(["",""]);
+  printEventer(printData);
+}
+
+function printEventerRemoveLine(j){
+  eventerReadOut();
+  printData.splice(j,1);
+  printEventer(printData);
+}
+
+function eventerReadOut(){
+  var tempLen=printData.length;
+  printData=[];
+  for (var j=0; j<tempLen; j++){
+    printData.push([document.getElementById("textArea"+j+".1").value,document.getElementById("textArea"+j+".2").value]);
+  }
+}
+
+function clearAll(){
+  printEventer();
+  advancedAlarmLoad();
+}
+
+//----------------AlarmBoxStart-------------------//
+
+var actionTimerSekF=0;
+var actionTimerSek=0;
+var actionTimerMin=0;
+var actionTimerStd=0;
+var timerMode;
+var timerUpdater;
+
+function advancedAlarmLoad(){
+  actionTimerSekF=0;
+  actionTimerSek=0;
+  actionTimerMin=0;
+  actionTimerStd=0;
+  timerModeF(0);
+}
+
+function timerAdjustWaitFor(how){
+  if (how=="lastAction"){
+    actionTimerSekF=top.lastActionTime;
+  }
+  else{
+    actionTimerSekF+=how;
+    if (actionTimerSekF>359999){
+      actionTimerSekF-=359999;
+    }
+    else if (actionTimerSekF<0){
+      actionTimerSekF+=359999;
+    }
+  }
+  var actionTimerSekSek=actionTimerSekF;
+  var actionTimerSekMin;
+  var actionTimerSekStd;
+  if (actionTimerSekSek>=60){
+    actionTimerSekMin=parseInt(actionTimerSekSek/60);
+    actionTimerSekSek=actionTimerSekSek%60;
+    if (actionTimerSekMin>=60){
+      actionTimerSekStd=parseInt(actionTimerSekMin/60);
+      actionTimerSekMin=actionTimerSekMin%60;
+      if (actionTimerSekStd>99){
+        actionTimerSekStd=99;
+      }
+    }
+    else{
+      actionTimerSekStd=0;
+    }
+  }
+  else{
+    actionTimerSekMin=0;
+    actionTimerSekStd=0;
+  }
+  document.getElementById('showWaitSek').innerHTML=top.getText('timeFormat',0)+":<br>"+top.addZeroToTime(actionTimerSekSek);
+  document.getElementById('showWaitMin').innerHTML=top.getText('timeFormat',1)+":<br>"+top.addZeroToTime(actionTimerSekMin);
+  document.getElementById('showWaitStd').innerHTML=top.getText('timeFormat',2)+":<br>"+top.addZeroToTime(actionTimerSekStd);
+}
+
+function timerAdjustWaitUntil(howStd,howMin,howSek){
+  actionTimerSek+=howSek;
+  if (actionTimerSek>=60){
+    actionTimerMin+=1;
+    actionTimerSek-=60;
+  }
+  else if(actionTimerSek<0){
+    actionTimerSek+=60;
+    actionTimerMin-=1;
+  }
+  actionTimerMin+=howMin;
+  if (actionTimerMin>=60){
+    actionTimerStd+=1;
+    actionTimerMin-=60; 
+  }
+  else if(actionTimerMin<0){
+    actionTimerMin+=60;
+    actionTimerStd-=1;
+  }
+  actionTimerStd+=howStd;
+  if (actionTimerStd>=24){
+    actionTimerStd=0;
+  }
+  else if(actionTimerStd<0){
+    actionTimerStd=23;
+  }
+  document.getElementById('showWaitSek').innerHTML=top.getText('timeFormat',0)+":<br>"+top.addZeroToTime(actionTimerSek);
+  document.getElementById('showWaitMin').innerHTML=top.getText('timeFormat',1)+":<br>"+top.addZeroToTime(actionTimerMin);
+  document.getElementById('showWaitStd').innerHTML=top.getText('timeFormat',2)+":<br>"+top.addZeroToTime(actionTimerStd);
+}
+
+
+function timerModeF(mode){
+  timerMode=mode;
+  var tableVar="";
+  if (mode==0){
+    tableVar='<table border="0" cellpadding="0" cellspacing="3"><tr><td colspan="6"><button id="lastCommandTimerButton" class="p1 w6 default" onClick="timerAdjustWaitFor(\'lastAction\')">'+top.getText('lastActionSince',0)+' '+top.lastActionTime+' '+top.getText('timeFormat',0)+'</button></td></tr><tr><td><button id="timeAdjust10H" class="p1 w1 default"><img src="/img/up.gif"></button></td><td><button id="timeAdjust1H" class="p1 w1 default"><img src="/img/up.gif"></button></td><td><button id="timeAdjust10M" class="p1 w1 default"><img src="/img/up.gif"></button></td><td><button id="timeAdjust1M" class="p1 w1 default"><img src="/img/up.gif"></button></td><td><button id="timeAdjust10S" class="p1 w1 default"><img src="/img/up.gif"></button></td><td><button id="timeAdjust1S" class="p1 w1 default"><img src="/img/up.gif"></button></td></tr><tr><td colspan="2"><button id="showWaitStd" class="p1 w2 defaultNH"></button></td><td colspan="2"><button id="showWaitMin" class="p1 w2 defaultNH"></button></td><td colspan="2"><button id="showWaitSek" class="p1 w2 defaultNH"></button></td></tr><tr><td><button id="timeAdjustN10H" class="p1 w1 default"><img src="/img/down.gif"></button></td><td><button id="timeAdjustN1H" class="p1 w1 default"><img src="/img/down.gif"></button></td><td><button id="timeAdjustN10M" class="p1 w1 default"><img src="/img/down.gif"></button></td><td><button id="timeAdjustN1M" class="p1 w1 default"><img src="/img/down.gif"></button></td><td><button id="timeAdjustN10S" class="p1 w1 default"><img src="/img/down.gif"></button></td><td><button id="timeAdjustN1S" class="p1 w1 default"><img src="/img/down.gif"></button></td></tr>';
+  }
+  else{
+    tableVar='<table border="0" cellpadding="0" cellspacing="3"><tr><td><button id="timeAdjust1000" class="p1 w1 default"><img src="/img/up.gif"></button></td><td><button id="timeAdjust100" class="p1 w1 default"><img src="/img/up.gif"></button></td><td><button id="timeAdjust0100" class="p1 w1 default"><img src="/img/up.gif"></button></td><td><button id="timeAdjust010" class="p1 w1 default"><img src="/img/up.gif"></button></td><td><button id="timeAdjust0010" class="p1 w1 default"><img src="/img/up.gif"></button></td><td><button id="timeAdjust001" class="p1 w1 default"><img src="/img/up.gif"></button></td></tr><tr><td colspan="2"><button id="showWaitStd" class="p1 w2 defaultNH"></button></td><td colspan="2"><button id="showWaitMin" class="p1 w2 defaultNH"></button></td><td colspan="2"><button id="showWaitSek" class="p1 w2 defaultNH"></button></td></tr><tr><td><button id="timeAdjustN1000" class="p1 w1 default"><img src="/img/down.gif"></button></td><td><button id="timeAdjustN100" class="p1 w1 default"><img src="/img/down.gif"></button></td><td><button id="timeAdjustN0100" class="p1 w1 default"><img src="/img/down.gif"></button></td><td><button id="timeAdjustN010" class="p1 w1 default"><img src="/img/down.gif"></button></td><td><button id="timeAdjustN0010" class="p1 w1 default"><img src="/img/down.gif"></button></td><td><button id="timeAdjustN001" class="p1 w1 default"><img src="/img/down.gif"></button></td></tr>';
+  }
+  tableVar+='</table>';
+  for (var i=0; i<=1; i++){
+    if(mode==i){
+      document.getElementById('modeB'+i).innerHTML='<button class="p1 w2 green" onClick="timerModeF('+i+');">'+top.getText('timerMode',i)+'</button>';
+    }
+    else{
+      document.getElementById('modeB'+i).innerHTML='<button class="p1 w2 default" onClick="timerModeF('+i+');">'+top.getText('timerMode',i)+'</button>';
+    }
+  }
+  document.getElementById('timerContainer').innerHTML=tableVar;
+  if (mode==0){
+    timerAdjustWaitFor(0);
+    clearInterval(timerUpdater);
+    timerUpdater=setInterval(updateTimer,100);
+    omega.ApplyHandlerRepeat({targetId:"timeAdjust10H",func:function(){timerAdjustWaitFor(36000);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjust1H",func:function(){timerAdjustWaitFor(3600);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjust10M",func:function(){timerAdjustWaitFor(600);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjust1M",func:function(){timerAdjustWaitFor(60);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjust10S",func:function(){timerAdjustWaitFor(10);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjust1S",func:function(){timerAdjustWaitFor(1);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjustN10H",func:function(){timerAdjustWaitFor(-36000);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjustN1H",func:function(){timerAdjustWaitFor(-3600);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjustN10M",func:function(){timerAdjustWaitFor(-600);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjustN1M",func:function(){timerAdjustWaitFor(-60);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjustN10S",func:function(){timerAdjustWaitFor(-10);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjustN1S",func:function(){timerAdjustWaitFor(-1);}});
+  }
+  else{
+    clearInterval(timerUpdater);
+    timerAdjustWaitUntil(0,0,0);
+    omega.ApplyHandlerRepeat({targetId:"timeAdjust1000",func:function(){timerAdjustWaitUntil(10,0,0);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjust100",func:function(){timerAdjustWaitUntil(1,0,0);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjust0100",func:function(){timerAdjustWaitUntil(0,10,0);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjust010",func:function(){timerAdjustWaitUntil(0,1,0);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjust0010",func:function(){timerAdjustWaitUntil(0,0,10);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjust001",func:function(){timerAdjustWaitUntil(0,0,1);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjustN1000",func:function(){timerAdjustWaitUntil(-10,0,0);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjustN100",func:function(){timerAdjustWaitUntil(-1,0,0);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjustN0100",func:function(){timerAdjustWaitUntil(0,-10,0);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjustN010",func:function(){timerAdjustWaitUntil(0,-1,0);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjustN0010",func:function(){timerAdjustWaitUntil(0,0,-10);}});
+    omega.ApplyHandlerRepeat({targetId:"timeAdjustN001",func:function(){timerAdjustWaitUntil(0,0,-1);}});
+  }
+}
+
+function advancedAlarmOk(){
+  eventerReadOut();
+  printData2=[]
+  for (var j=printData.length-1; j>=0; j--){
+    if (printData[j][0]=="" && printData[j][1]==""){
+      //printData.splice(j,1);
+    }
+    else{
+      printData2.push([printData[j][0].replace(/"/g,'\\"'),printData[j][1].replace(/"/g,'\\"')]);
+    }
+  }
+  if (timerMode==0){
+    if (actionTimerSekF!=0){
+      top.Request(JSON.stringify({'method':'TriggerEvent','kwargs':{"suffix":'[wait]',"payload":[printData2,0,actionTimerSekF]}}),100,1);
+    }
+    else{
+      top.alertBox(top.getText("sceneMessages","waitGreaterZero"));
+    }
+  }
+  else{
+    top.Request(JSON.stringify({'method':'TriggerEvent','kwargs':{"suffix":'[wait]',"payload":[printData2,1,top.addZeroToTime(actionTimerStd),top.addZeroToTime(actionTimerMin),top.addZeroToTime(actionTimerSek)]}}),100,1);
+  }
+}
+
+function updateTimer(){
+    document.getElementById('lastCommandTimerButton').innerHTML=top.getText('lastActionSince',0)+' '+top.lastActionTime+' '+top.getText('timeFormat',0);
+}
+//----------------AlarmBoxEnd-------------------//
+
+omega.OnLoad(function(){
+    printEventer();
+    document.getElementById('modeChooser').innerHTML='<table class="rightBorder" cellpadding="0" cellspacing="3"><tr><td><button class="p2 w2 defaultNH">'+top.getText('mode',0)+':</button></td></tr><tr><td><div id="modeB0"></div></td></tr><tr><td><div id="modeB1"></div></td></tr></table>';
+    advancedAlarmLoad();
+    document.getElementById('orline').innerHTML='---- '+top.getText('or',0).toUpperCase()+' ----';
+    document.getElementById('okB').innerHTML='<button class="p1 w2 default Hgreen" onClick="advancedAlarmOk();">'+top.getText('ok',0)+'</button>';
+    document.getElementById("clearB").innerHTML = '<button class="p1 w2 default Hred" onClick="clearAll();">'+top.getText('clearSettings',0)+'</button>';
+    document.getElementById("insertEventB").innerHTML = '<button class="p1 w3 default" onClick="insertEvent1(false,true);">'+top.getText('insertEvent',0)+'</button>';
+});
+
+</script>
+
+</head>
+
+<body>
+<center>
+<table style="height:100%; width:100%;" border="0" cellpadding="0" cellspacing="0">
+    <tr valign="top" class="title">
+      <td align="left"><br></td>
+      <td align="right">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td><div id="insertEventB"></div></td>
+            <td class="border3"></td>
+            <td><div id="clearB"></div></td>
+            <td class="border3"></td>
+            <td><div id="okB"></div></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr align="center" valign="top">
+      <td align="center" colspan="2">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td colspan="2"><div id="eventContent"></div></td>
+          </tr>
+          <tr class="HSpace medium"></tr>
+          <tr>
+            <td colspan="2"><div id="orline" Style="text-align:center;"></div></td>
+          </tr>
+          <tr class="HSpace medium"></tr>
+          <tr>
+            <td style="width:1px;" valign="top"><div id="modeChooser" align="left"></div></td>
+            <td><div id="timerContainer" align="center"></div></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+</table>
+</center>
+</body>
+</html>

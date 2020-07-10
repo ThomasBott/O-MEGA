@@ -1,0 +1,125 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+var logData=[];
+var logDirection=top.userSettings["logDirection"]||"up";
+
+function printLogger(data){
+  logData=data;
+  var filterValue=document.getElementById("filter").value.toLowerCase();
+  var tablestr='<table border="0" cellpadding="0" cellspacing="3" style="width:100%;"><tr>';
+  if (logDirection=="down"){
+    tablestr+='<td class="w2 special2 defaultNH" onClick="changeDirection(\'up\');"><img src="/img/down2.png" />';
+  }
+  else{
+    tablestr+='<td class="w2 special2 defaultNH" onClick="changeDirection(\'down\');"><img src="/img/up2.png" />';
+  }
+  tablestr+=' '+top.getText("time",0)+'</td><td class="special2 defaultNH">'+top.getText("event",0)+' (suffix)</td><td class="special2 defaultNH">'+top.getText("event",0)+' (payload)</td></tr>';
+  for (var i=0; i<data.length; i++){
+    var tempIndex=i;
+    if (logDirection=="up"){
+      tempIndex=data.length-1-i;
+    }
+    if (filterValue=="" || data[tempIndex][0].toLowerCase().indexOf(filterValue)!=-1 || data[tempIndex][1].toLowerCase().indexOf(filterValue)!=-1){
+      tablestr+=buildLogLine(data[tempIndex],tempIndex);
+    }
+  }
+  tablestr+='</table>';
+  document.getElementById('content').innerHTML=tablestr;
+}
+
+function buildLogLine(data,i){
+  var tempVal="";
+  if (data[2]!=null){
+    tempVal=JSON.stringify(data[2]);
+  }
+  return '<tr><td align="center" class="transparent0NH text">'+data[0]+'</td><td onClick="selectEvent(1,'+i+')" class="transparent0 text">'+data[1]+'</td><td onClick="selectEvent(2,'+i+')" class="transparent0 text">'+tempVal+'</td></tr>';
+}
+
+function selectEvent(mode,i){
+  if (top.elementToLearnEvent){
+    if (mode==1){
+      top.closeEventLog(logData[i][1]);
+    }
+    else if (mode==2){
+      var tempVal="";
+      if (logData[i][2]!=null){
+        tempVal=JSON.stringify(logData[i][2]);
+      }
+      top.closeEventLog(tempVal);
+    }
+  }
+  else{
+    if (mode==1){
+      top.closeEventLog([logData[i][1],""]);
+    }
+    else if (mode==2){
+      var tempVal="";
+      if (logData[i][2]!=null){
+        tempVal=JSON.stringify(logData[i][2]);
+      }
+      top.closeEventLog([logData[i][1],tempVal]);
+    }
+  }
+}
+
+function goBack(){
+  top.openPage(top.pageToLearnEvent);
+}
+
+function changeDirection(upDown){
+    if (upDown!=logDirection){
+      logDirection=upDown;
+      top.userSettings1["logDirection"]=logDirection;
+      top.saveUserSettings(false);
+      printLogger(logData);
+    }
+}
+
+omega.OnLoad(function(){
+    document.getElementById('backB').innerHTML='<button class="p1 w2 default" onClick="goBack();"><img src="/img/back2.png" /> '+top.getText("back",0)+'</button>';
+    document.getElementById('filterI').innerHTML='<input id="filter" class="p1 w3 default" onkeyup="printLogger(logData);" />';
+    changeDirection(logDirection);
+    top.uniUpdate(omega.pageID,"eg.plugins.OMEGA.plugin.eventLog","printLogger",printLogger);
+});
+
+</script>
+</head>
+
+<body>
+<center>
+<table style="width:100%;" border="0" cellpadding="0" cellspacing="0">
+    <tr valign="top" class="title">
+      <td align="right">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td><div id="filterI"></div></td>
+            <td class="border3"></td>
+            <td><div id="backB"></div></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr align="center" valign="top">
+      <td colspan="2">
+        <table border="0" cellpadding="0" cellspacing="0" style="width:100%; max-width:1000px;"><!--495-->
+          <tr align="center">
+            <td>
+              <div id="content"></div></td>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+</table>
+</center>
+</body>
+</html>

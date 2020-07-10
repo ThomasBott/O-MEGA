@@ -1,0 +1,706 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/tinybox.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+var newActions=[];
+var oldActions=[];
+var dragStarted=false;
+var startId;
+var pos;
+var overPosA;
+var startType;
+var notMoved=true;
+var endOfCondition;
+var endOfConditionTotal;
+
+//----------------------------------------dragAndDropStart--------------------------------------//
+
+function dragging(overPos){
+  if (dragStarted==true){
+    if (overPos>overPosA){
+      for (var i=overPosA; i<overPos; i++){          
+        dragging2(i+1);
+      }
+    }
+    else if (overPos<overPosA){
+      for (var i=overPosA; i>overPos; i--){
+        dragging2(i-1);
+      }
+    }
+  }
+}
+
+function dragging2(overPos){
+    if (newActions[overPosA][2]!=0 || (overPosA>0 && newActions[overPosA-1][2]==0) || (newActions.length-1>overPosA &&  newActions[overPosA+1][1]==newActions[overPosA][1])){
+      if (overPos>overPosA){
+        var overPos2;
+        if(newActions[overPosA][2]==1){
+          overPos2=endOfConditionTotal[overPosA];
+        }
+        else if(newActions[overPosA][2]==2){
+          var targetCondition=findCondition(overPosA,false);
+          var maxp= endOfConditionTotal[targetCondition]-2;
+          if (overPos<=maxp && newActions[overPos][2]!=1 && newActions[overPosA][1]+1==newActions[overPos][1]){
+            overPos2=overPos;
+          }
+          else if (overPos<=maxp && newActions[overPosA+1][2]==1 && newActions[overPosA][1]+1==newActions[overPos+1][1]){
+            var overPosA1=overPosA;
+            overPosA++;
+            dragging2(overPosA1);
+            overPos2=-1;
+            overPosA=overPosA1+1;
+          }
+          else{
+            overPos2=-1;
+            $("#line_"+i).removeClass("dragging");
+          }
+        }
+        else{
+          overPos2=overPos;
+        }
+        if (overPos2==overPos){
+          var i=overPos;
+          var targetLevel=newActions[overPos2][1];
+          if (newActions[overPos][2]>0){
+            targetLevel++;
+          }
+          changeLevelTwo(overPosA,targetLevel);
+          for (i; i>overPosA; i--){
+            $("#line_"+(i-1)).removeClass("dragging");
+            shiftCells(i,i-1);
+          }
+          overPosA++;
+          changeLevel(0,0);
+        }
+      }
+      else if (overPos<overPosA){
+        var overPos2;
+        if(newActions[overPosA][2]==1){
+          overPos2=endOfConditionTotal[overPosA]-1;
+        }
+        else if(newActions[overPosA][2]==2){
+          var targetCondition=findCondition(overPosA,false);
+          var minp=targetCondition+2;
+          if (overPos>=minp && newActions[overPosA][1]+1==newActions[overPos][1]){
+            overPos2=overPosA;
+          }
+          else{
+            overPos2=-1;
+            $("#line_"+i).removeClass("dragging");
+          }
+        }
+        else{
+          overPos2=overPosA;
+        }
+        if (overPos2!=-1){
+          var i=overPos;
+          if (newActions[overPos][2]!=2){
+            changeLevelTwo(overPosA,newActions[overPos][1]);
+          }
+          for (i; i<overPos2; i++){
+            $("#line_"+(i+1)).removeClass("dragging");
+            shiftCells(i,i+1);
+          }
+          overPosA=overPos;
+          changeLevel(0,0);
+        }
+      }
+      if (newActions[overPosA][2]==0){
+        $("#line_"+overPosA).addClass("dragging");
+      }
+      else{
+        for (var j=overPosA; j<endOfConditionTotal[overPosA]; j++){
+          $("#line_"+j).addClass("dragging");
+        }
+      }
+    }
+    else{
+      cancel();
+    }
+}
+
+function shiftCells(i,i2){
+  notMoved=false;
+  var temp=newActions[i];
+  newActions[i]=newActions[i2];
+  newActions[i2]=temp;
+  document.getElementById('p'+i).innerHTML=top.convertActionText(newActions[i]);
+  document.getElementById('p'+i2).innerHTML=top.convertActionText(newActions[i2]);
+}
+
+function dragStart(event){
+  if (dragStarted==false){
+    notMoved=true;
+    dragStarted=true;
+    startId=event.currentTarget.id;
+    startType=startId.substring(0,1);
+    startId=parseInt(startId.substring(1));
+    overPosA=startId;
+    event.preventDefault();
+    if (event.type=="touchstart"){
+      pos=event.originalEvent.touches[0].pageY;
+    }
+    else{
+      pos=event.pageY;
+    }
+  }
+}
+
+function dragEnd(){
+  if (dragStarted){
+    cancel();
+    if (notMoved){
+      if (newActions[overPosA][2]!=2){
+        if (startType=="l"){
+          changeLevel(overPosA,-1);
+        }
+        else if(startType=="r"){
+          changeLevel(overPosA,1);
+        }
+      }
+    }
+    else{
+      calculateAllLevel();
+    }
+  }
+}
+
+function cancel(){
+  if (dragStarted){
+    dragStarted=false;
+    var dragArr=document.getElementsByClassName("dragging");
+    for (var i=dragArr.length-1; i>=0; i--){
+      $("#"+dragArr[i].id).removeClass("dragging");
+    }
+  }
+}
+
+function move(event){
+  if (dragStarted){
+    event.preventDefault();
+    if (event.type=="touchmove"){
+      pos=event.originalEvent.touches[0].pageY;
+    }
+    else{
+      pos=event.pageY;
+    }
+    var i=startId;
+    if (pos<$("#line_"+i).offset().top){
+      while(pos<$("#line_"+i).offset().top){
+        i--;
+      }
+    }
+    else if (pos>($("#line_"+i).offset().top+$("#line_"+i).height())){
+      while(pos>($("#line_"+i).offset().top+$("#line_"+i).height())){
+        i++;
+      }
+    }
+    dragging(i);
+    //$("#line_"+i).addClass("dragging");
+  }
+}
+//----------------------------------------dragAndDropEnd--------------------------------------//
+
+function changeLevel(j,how){
+  if(how<0 && document.getElementById('l'+j).innerHTML=='<img src="/img/left3.png"><img src="/img/drag2.png">'){
+    var targetLevel=newActions[j][1]+how;
+    if (targetLevel<0){
+      targetLevel=0;
+    }
+    changeLevelTwo(j,targetLevel);
+  }
+  else if(how>0 && document.getElementById('r'+j).innerHTML=='&nbsp;<img src="/img/right3.png">'){
+    var targetLevel=newActions[j][1]+how;
+    changeLevelTwo(j,targetLevel);
+  }
+  findEndOfConditions();
+  for (var i=0; i<newActions.length; i++){
+    i=changeLevelTwo(i,0);
+  }
+  for (var i=0; i<newActions.length; i++){
+    var WRight=newActions[i][1]*15+32;
+    if (i>0){
+      if (newActions[i][2]==2){
+        document.getElementById('r'+i).innerHTML='&nbsp;';
+        document.getElementById('l'+i).innerHTML='&nbsp;';
+      }
+      else{
+        if((newActions[i-1][2]>0 && newActions[i-1][1]>=newActions[i][1]) || newActions[i-1][1]>newActions[i][1]){
+          document.getElementById('r'+i).innerHTML='&nbsp;<img src="/img/right3.png">';
+        }
+        else{
+          document.getElementById('r'+i).innerHTML='&nbsp;';
+        }
+        if (newActions[i][1]>0 && newActions[i-1][2]==0 && (endOfCondition[findCondition(i,false)]>=newActions.length || (newActions[endOfCondition[findCondition(i,false)]][2]!=2 || newActions[findCondition(i,false)][1]!=newActions[endOfCondition[findCondition(i,false)]][1]) || i>endOfCondition[findCondition(i,false)])){
+          document.getElementById('l'+i).innerHTML='<img src="/img/left3.png"><img src="/img/drag2.png">';
+        }
+        else{
+          document.getElementById('l'+i).innerHTML='<img src="/img/drag2.png">';
+        }
+      }
+    }
+    else{
+      document.getElementById('r'+i).innerHTML='&nbsp;';
+      document.getElementById('l'+i).innerHTML='<img src="/img/drag2.png">';
+    }
+    //document.getElementById('num'+i).innerHTML=newActions[i][1];
+    document.getElementById('r'+i).style.width=WRight+'px';
+    if (newActions[i][2]==1 && findActionsToCondition(i).length>=2 && (endOfCondition[i]==newActions.length || newActions[endOfCondition[i]][2]!=2)){
+      $('#els'+i).show();
+    }
+    else{
+      $('#els'+i).hide();
+    }
+    if(newActions[i][4]==0){
+      $('#p'+i).addClass("Cgray");
+    }
+    else{
+      $('#p'+i).removeClass("Cgray");
+    }
+    if (newActions[i][2]==1 || newActions[i][2]==2){
+      $('#p'+i).removeClass(backClass).addClass("transparent0NH");
+    }
+    else{
+      $('#p'+i).removeClass("transparent0NH").addClass(backClass);
+    }
+  }
+}
+
+function changeLevelTwo(i,newlevel){
+  newActions[i][1]=newlevel;
+  if (newActions[i][2]==1){
+    i=chageLevelForCondition(i);
+  }
+  return i;
+}
+
+function chageLevelForCondition(i){
+  //calculateMaxLevel(i);
+  var j=i+1;
+  for(j; j<endOfConditionTotal[i]; j++){
+    if (newActions[j][2]==2){
+      newActions[j][1]=newActions[i][1];
+    }
+    else{
+      newActions[j][1]=newActions[i][1]+1;
+    }
+    if(newActions[j][2]==1){
+      j=chageLevelForCondition(j);
+    }
+  }
+  return j-1;
+}
+
+function calculateMaxLevel(i){
+  if (i>0){
+    if(newActions[i-1][2]>0){
+      if (newActions[i-1][1]+1!==newActions[i][1]){
+        newActions[i][1]=newActions[i-1][1]+1;
+      }
+    }
+    else if(newActions[i-1][1]<newActions[i][1]){
+      newActions[i][1]=newActions[i-1][1];
+    }
+  }
+  else{
+    newActions[i][1]=0;
+  }
+}
+
+function calculateAllLevel(){
+  for (var i=0; i<newActions.length; i++){
+    calculateMaxLevel(i);
+  }
+  changeLevel(0,0);
+}
+
+function findCondition(pos,elseAsWell){
+  if (pos<0){
+    pos=0;
+  }
+  var startp=pos-1;
+  if (elseAsWell){
+    for (var i=startp; i>=0; i--){
+      if ((newActions[i][1]<newActions[pos][1] || newActions[pos][1]==2 && newActions[i][1]<=newActions[pos][1]) && newActions[i][2]>0){
+        startp=i;
+        break;
+      }
+    }
+  }
+  else{
+    for (var i=startp; i>=0; i--){
+      if ((newActions[i][1]<newActions[pos][1] || newActions[pos][1]==2 && newActions[i][1]<=newActions[pos][1]) && newActions[i][2]==1){
+        startp=i;
+        break;
+      }
+    }
+  }
+  if (newActions[startp][2]>0){
+    return startp;
+  }
+  else{
+    return -1;
+  }
+}
+
+function findEndOfConditions(){
+  endOfCondition=[];
+  endOfConditionTotal=[];
+  for (var i=0; i<newActions.length; i++){
+    if (newActions[i][2]>0){
+      endOfCondition[i]=findEndOfCondition(i);
+      if (endOfCondition[i]<newActions.length-1 && newActions[endOfCondition[i]][2]==2 && newActions[i][1]==newActions[endOfCondition[i]][1]){
+        endOfConditionTotal[i]=findEndOfCondition(endOfCondition[i]);
+      }
+      else{
+        endOfConditionTotal[i]=endOfCondition[i];
+      }
+    }
+  }
+}
+
+function findEndOfCondition(i){
+  var j=i+1;
+  while (j<newActions.length && newActions[i][1]<newActions[j][1]){
+    j++;  
+  }
+  return j;
+}
+
+function findActionsToCondition(i){
+  var actions=[];
+  var j=i+1;
+  for (j; j<endOfCondition[i]; j++){
+    if (newActions[j][1]==newActions[i][1]+1 && newActions[j][2]!=2){
+      actions.push(j);
+    }
+  }
+  return actions;
+}
+
+function tablePrint(){
+  var tablestr='<table border="0" cellpadding="0" cellspacing="3" style="width:100%;"><tr><td class="transparent0NH special2 text">'+top.getText('files.json',omega.pageID).replace(/<br>/g,' ')+':</td></tr>';
+  for (var i=0; i<newActions.length; i++){
+    var tempText=top.convertActionText(newActions[i]).replace(/<br>/g,' ');
+    tablestr+='<tr><td><table style="width:100%;" border="0" cellpadding="0" cellspacing="0"><tr id="line_'+i+'"><td id="l'+i+'" class="move transparent0 buttonW1 right text"></td><td class="border3"><br></td><td id="r'+i+'" class="move transparent0 buttonW1 left text"></td><td class="border3"><br></td><td id="p'+i+'" class="'+backClass+' text" onClick="openEditor1('+i+');">'+tempText+'</td><td id="els'+i+'" style="width:1px;"><button class="p1 w2 default Hgreen" onClick="addElseToCondition('+i+');">'+top.getText('addElse',0)+'</button></td><td class="border3"><br></td><td style="width:1px"><button id="rem'+i+'" class="p1 w1 default Hred" onClick="removeF('+i+');">-</button></td></tr></table></td></tr>';
+  }
+  tablestr+='</table>';
+  document.getElementById('content').innerHTML=tablestr;
+  if (newActions.length>0){
+    $(".move").on("touchstart", dragStart);
+    $(".move").on("mousedown", dragStart);
+  }
+  showProgress();
+}
+
+var selectedLine=-1;
+function openEditor1(i){
+  if (omega.MultiTriggerCheck({id:""+i})==2){
+    openEditor(i);
+  }
+  else{
+    if (selectedLine!=-1){
+      $(document.getElementById("p"+selectedLine)).removeClass("yellow");
+    }
+    if (selectedLine!=i){
+      $(document.getElementById("p"+i)).addClass("yellow");
+      selectedLine=i;
+    }
+    else{
+      selectedLine=-1;
+    }
+  }
+}
+
+function openEditor(i){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  content='<table border="0" cellpadding="0" cellspacing="3" align="right"><tr><td>'+top.getText('name',0)+':<br><u>'+top.getText('command',0)+'</u></td><td colspan=2"><input id="textBox" class="w4"></input></td></tr>';
+  if (newActions[i][2]==0){
+    content+='<tr><td colspan="3"><textarea id="textField" border="0" class="w6" style="height:75px;"></textarea></td></tr><tr><td style="width:1px;"><button class="p1 w2 default" onClick="testF();">'+top.getText('test',0)+'</button></td>';
+  }
+  else{
+    content+='<tr><td colspan="3"><textarea id="textField" border="0" class="w6"></textarea></td></tr><tr><td colspan="3">'+top.getText('testResult',0)+': <div style="display:inline" id="testResultBox"></div></td></tr><tr><td style="width:1px;"><button class="p1 w2 default" onClick="testConditionF();">'+top.getText('test',0)+'</button></td>';
+  }
+  content+='<td><button onClick="disableButton('+i+',newActions['+i+'][4]-1);" id="disableButton" class="p1 w2">'+top.getText('disable',0)+'</button></td><td style="width:1px;" align="right" ><button class="p1 w2 default" onClick="openTextOK('+i+');">'+top.getText('ok',0)+'</button></td>';
+  content+='</tr></table>';
+  TINY.box.show({html:content,height: 155,mask:true,maskid:'whitemask',opacity:30,animate:true,close:false,openjs:function(){openText(i);},closejs:function(){closeText(i);}});
+}
+
+function testF(){
+  top.Request(JSON.stringify({'method':'TriggerEvent','kwargs':JSON.parse(document.getElementById("textField").value)}));
+}
+
+var conditionResultTimeout;
+function testConditionF(){
+  var command={"method":"sceneCheckCondition","args":[JSON.stringify(document.getElementById("textField").value)],"callback":function(data){
+      document.getElementById("testResultBox").innerHTML=top.getText('trueFalse',data);
+      clearTimeout(conditionResultTimeout);
+      conditionResultTimeout=setTimeout('document.getElementById("testResultBox").innerHTML="";',1500);
+  }};
+  //console.log(command);
+  omega.Request(command);
+}
+
+//function execute(i){
+//  top.Request(newActions[i][0]);
+//}
+
+function openText(i){
+  if (selectedLine!=-1){
+    unselectSelectedLine();
+  }
+  $(document.getElementById("p"+i)).addClass("blinking");
+  document.getElementById("textField").value=newActions[i][0];
+  if (typeof newActions[i][3]!="undefined"){
+    document.getElementById("textBox").value=newActions[i][3];
+  }
+  disableButton(i,newActions[i][4]);
+}
+function disableButton(i,newState){
+  if (typeof newState!="undefined" && newState==0){
+    $(document.getElementById("disableButton")).addClass("red").removeClass("default");
+    newActions[i][4]=0;
+  }
+  else{
+    $(document.getElementById("disableButton")).addClass("default").removeClass("red");
+    newActions[i][4]=1;
+  }
+}
+function openTextOK(i){
+  newActions[i][0]=document.getElementById("textField").value;
+  newActions[i][3]=document.getElementById("textBox").value;
+  TINY.box.hide();
+  tablePrint();
+  calculateAllLevel();
+}
+function closeText(i){
+  clearTimeout(conditionResultTimeout);
+  $(document.getElementById("p"+i)).removeClass("blinking");
+}
+
+function removeF(i){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  if (newActions[i][1]==0 || findActionsToCondition(findCondition(i,true)).length>=2){
+    if(newActions[i][2]==1){
+      $("#rem"+i).removeClass("default");
+      $("#rem"+i).addClass("green");
+      for (var j=i; j<endOfConditionTotal[i]; j++){
+        $("#line_"+j).addClass("dragging");
+      }
+      TINY.box.show({html:'<center>'+top.getText('sceneMessages','deleteActionsInCondotion')+'<br><br><table class="stdtable" cellpadding="0" cellspacing="0"><tr><td><button class="p1 w2 default" onClick="removeCondition('+i+',true); TINY.box.hide();">'+top.getText('yes',0)+'</button></td><td><button class="p1 w2 default" onClick="removeCondition('+i+',false); TINY.box.hide();">'+top.getText('no',0)+'</button></td></tr></table></center>',maskid:'whitemask',opacity:30,animate:false,close:false,closejs:function(){$("#rem"+i).removeClass("green"); $("#rem"+i).addClass("default"); dragStarted=true; cancel();}});
+    }
+    else{
+      newActions.splice(i,1);
+      tablePrint();
+      calculateAllLevel();
+    }
+  }
+  else{
+    top.alertBox(top.getText('sceneMessages','deleteSceneObjectError'));
+  }
+}
+
+function removeCondition(i,all){
+  if (all){
+    newActions.splice(i,endOfConditionTotal[i]-i);
+  }
+  else{
+    for (var j=i+1; j<endOfConditionTotal[i]; j++){
+      newActions[j][1]--;
+    }
+    if(endOfCondition[i]<newActions.length && newActions[endOfCondition[i]][2]==2){
+      newActions.splice(endOfCondition[i],1);
+    }
+    newActions.splice(i,1);
+  }
+  tablePrint();
+  calculateAllLevel();
+}
+
+function clearAll(){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  newActions=[];
+  tablePrint();
+}
+
+function addActionsF(){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  $("#addActions").removeClass("default");
+  $("#addActions").addClass("green");
+  TINY.box.show({html:'<center>'+top.getText('sceneMessages','forwardCommands')+'<br><br><table class="stdtable" cellpadding="0" cellspacing="0"><tr><td><button class="p1 w2 default" onClick="top.sceneRecordStart(top.sceneChoosen,true,newActions,false,true,selectedLine); TINY.box.hide();">'+top.getText('yes',0)+'+'+top.getText('recordPauses',0)+'</button></td><td><button class="p1 w2 default" onClick="top.sceneRecordStart(top.sceneChoosen,true,newActions,false,false,selectedLine); TINY.box.hide();">'+top.getText('yes',0)+'</button></td><td><button class="p1 w2 default" onClick="top.sceneRecordStart(top.sceneChoosen,false,newActions,false,false,selectedLine); TINY.box.hide();">'+top.getText('no',0)+'</button></td></tr></table></center>',maskid:'whitemask',opacity:30,animate:false,close:false,closejs:function(){$("#addActions").removeClass("green"); $("#addActions").addClass("default");}});
+}
+
+function addConditionF(){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  if (selectedLine!=-1 && newActions[selectedLine][0]=='["ELSE"]'){
+    top.alertBox(top.getText("sceneMessages","addConditionOnElseError"),unselectSelectedLine);
+  }
+  else{
+    top.sceneRecordStart(top.sceneChoosen,false,newActions,true,false,selectedLine);
+  }
+}
+
+function unselectSelectedLine(o){
+  $(document.getElementById("p"+selectedLine)).removeClass("yellow");
+  selectedLine=-1;
+}
+
+function addElseToCondition(i){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  var actions=findActionsToCondition(i);
+  if (actions.length>=2){
+    newActions.splice(actions[actions.length-1],0,[JSON.stringify(["ELSE"]),newActions[i][1],2]);
+    tablePrint();
+    calculateAllLevel();
+  }
+  else{
+    alert(top.getText('error',0));
+  }
+}
+
+function saveF(){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  top.sceneActionsSave(top.sceneChoosen,newActions);
+  oldActions=newActions;
+}
+
+var wasActive=false;
+var executionIndex=0;
+function showProgress(){
+  if (top.scenesIds[top.scenesFind[top.sceneChoosen]][2]=="[activate]"){
+    executionIndex = top.scenesIds[top.scenesFind[top.sceneChoosen]][4];
+    wasActive=true;
+    for (var i=0; i<=executionIndex; i++){
+      $(document.getElementById("p"+i)).addClass("green");
+    }
+  }
+  else if(wasActive){
+    executionIndex=0;
+    wasActive=false;
+    for (var i=0; i<newActions.length; i++){
+      $(document.getElementById("p"+i)).removeClass("green");
+    }
+  }
+}
+
+var oldScene=-1;
+omega.OnUpdate(function(ext){
+  //console.log("load"+ext);
+  if (ext=="reload" || ext=="load" && oldScene!=top.sceneChoosen){
+    oldScene=top.sceneChoosen;
+    var command={'method':'getSceneActions','args':[top.sceneChoosen],'callback':function(data){
+      if (!data){
+        oldActions=[];
+        newActions=[];
+      }
+      else{
+        oldActions=JSON.parse(data);
+        newActions=JSON.parse(data);
+      }
+      tablePrint();
+      calculateAllLevel();
+    }};
+    omega.Request(command);
+  }
+  else{
+    showProgress();
+  }
+});
+
+omega.OnLoad(function(){
+    if (top.touchDevice){
+      backClass="transparent1NH";
+    }
+    else{
+      backClass="transparent1";
+    }
+    if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+        return false;
+    }
+    document.getElementById("okB").innerHTML = '<button class="p1 w2 default Hgreen" onClick="saveF();">'+top.getText('saveChanges',0)+'</button>';
+    document.getElementById("clearB").innerHTML = '<button class="p1 w2 default Hred" onClick="clearAll();">'+top.getText('clearSettings',0)+'</button>';
+    document.getElementById("addConditionB").innerHTML = '<button class="p1 default Hgreen" style="width:100%" onClick="addConditionF();">+ '+top.getText('addCondition',0)+'</button>';
+    document.getElementById("addActionsB").innerHTML = '<button id="addActions" class="p1 default Hgreen" style="width:100%" onClick="addActionsF();">+ '+top.getText('addActions',0)+'</button>';
+    $("#content").on("touchend", dragEnd).on("touchmove", move).on("touchleave", cancel).on("mouseup", dragEnd).on("mousemove", move).on("mouseleave", cancel);
+    omega.OnBeforeUnload(function (){
+      if (JSON.stringify(oldActions)!=JSON.stringify(newActions)){
+        if (!confirm(omega.GetText('discardUnsavedSettings'))){
+          return false;
+        }
+      }
+    });
+});
+
+</script>
+
+</head>
+
+<body>
+<center>
+<table style="width:100%;" border="0" cellpadding="0" cellspacing="0">
+    <tr valign="top" class="title">
+      <td align="right">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td><div id="clearB"></div></td>
+            <td class="border3"></td>
+            <td><div id="okB"></div></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr align="center" valign="top">
+      <td align="center" colspan="2">
+        <table border="0" cellpadding="0" cellspacing="0" style="width:100%; max-width:600px;">
+          <tr>
+            <td>
+              <div id="content"></div></td>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <table class="stdtable" border="0" cellpadding="0" cellspacing="0" style="width:100%;">
+                <tr>
+                  <td class="shrink cutTop"><div id="addConditionB"></div></td>
+                  <td class="shrink cutTop last"><div id="addActionsB"></div></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+</table>
+</center>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/tinybox.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+var configData={};
+var onOffMapping={"retriggerBehaviour":[0,1,2],"onStart":[0,1,2,3],"lockScene":[0,1]};
+var settingsMappings={"hideScene":3,"retriggerBehaviour":5,"onStart":6,"lockScene":7,"views":8};
+
+var printData;
+function configPrint(id){
+  var contentStr='<table class="stdtable" border="0" cellpadding="0" cellspacing="0"><tr><td><button class="p2 w2 defaultNH">'+top.getText("sceneSettings"+id,"name")+':</button></td></tr>';
+  for (var i=0; i<onOffMapping[id].length; i++){
+    contentStr+='<tr><td><button class="p1 w2';
+    if (configData[id]==onOffMapping[id][i]){
+      contentStr+=' green';
+    }
+    else{
+      contentStr+=' default';
+    }
+    contentStr+='" onClick="setConfig(\''+id+'\','+onOffMapping[id][i]+')">'+top.getText('sceneSettings'+id,onOffMapping[id][i])+'</button></td></tr>';
+  }
+  contentStr+='</table>';
+  document.getElementById(id+"Content").innerHTML=contentStr;
+}
+
+function setConfig(vari,newValue){
+  var settings = top.scenesIds[top.scenesFind[top.sceneChoosen]];
+  if (settings[settingsMappings[vari]]!=newValue){
+    if(sceneSetting(settingsMappings[vari],newValue)){
+        configData[vari]=newValue;
+        configPrint(vari);
+    }
+  }
+  else{
+    configData[vari]=newValue;
+    configPrint(vari);
+  }
+}
+
+//----------------------------------ViewsChooseStart---------------------------------//
+var listChooserSelectedArray = [];
+var listChooserOptionsDict = {};
+var boxOpen="";
+
+
+function selectViewsF(button){
+    if (!top.user["parameters"]["isAdmin"]){
+        omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+        return false;
+    }
+    var content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="PChooser" style="height: 230px; width: 166px; overflow-y: auto; overflow-x: hidden;"></div></td></tr><tr><td align="right" style="padding-top:3px;"><button class="p1 w2 default" onClick="PChooseOK();">'+top.getText("ok",0)+'</button></td></tr></table>';
+    TINY.box.show({html:content,fixed:false,top:0,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){$(button).addClass('blinking'); printListChooser(); boxOpen="selectViews";},closejs:function(){$(button).removeClass('blinking'); boxOpen="";}});
+}
+
+function printListChooser(){
+  document.getElementById("boxTitle").innerHTML=top.getText('devframe','views')+":";
+  var settings = top.scenesIds[top.scenesFind[top.sceneChoosen]];
+  var tempchooserSelectedArray = settings[settingsMappings["views"]]||[];
+  listChooserOptionsDict = {};
+  var chooserOptionsArray = [];
+  for (var i=0; i<top.views.length; i++){
+    var tempVal=top.views[i][0];
+    chooserOptionsArray.push(tempVal);
+    var tempText=top.getText('views.json',tempVal);
+    listChooserOptionsDict[tempVal]=tempText;
+  }
+  listChooserSelectedArray = [];
+  for (var i=0; i<tempchooserSelectedArray.length; i++){
+    if (tempchooserSelectedArray[i]!=="" && tempchooserSelectedArray[i]!="-"){
+      if (chooserOptionsArray.indexOf(tempchooserSelectedArray[i])==-1){
+        chooserOptionsArray.push(tempchooserSelectedArray[i]);
+      }
+      listChooserSelectedArray.push(tempchooserSelectedArray[i]);
+    }
+  }
+  //chooserOptionsArray=chooserOptionsArray.sort();
+  var content='<table border="0" cellpadding="0" cellspacing="3">';
+  for (var i=0; i<chooserOptionsArray.length ;i++){
+    var curval=chooserOptionsArray[i];
+    if (curval!="-"){
+      if (listChooserSelectedArray.indexOf(curval)!=-1){
+        content+='<tr><td id="PChoose'+curval+'B"><button class="p1 w4 green" onClick="PChooseunselect(\''+curval+'\')">'+listChooserOptionsDict[curval]+'</button></td></tr>';
+      }
+      else{
+        content+='<tr><td id="PChoose'+curval+'B"><button class="p1 w4 default" onClick="PChooseselect(\''+curval+'\')">'+listChooserOptionsDict[curval]+'</button></td></tr>';
+      }
+    }
+  }
+  content+='</table>';
+  document.getElementById("PChooser").innerHTML=content;
+  textFildOpen=true;
+}
+
+function PChooseselect(st){
+  if (listChooserSelectedArray.indexOf(st)==-1){
+    listChooserSelectedArray.push(st);
+  }
+  document.getElementById("PChoose"+st+"B").innerHTML='<button class="p1 w4 green" onClick="PChooseunselect(\''+st+'\')">'+listChooserOptionsDict[st]+'</button>';
+}
+
+function PChooseunselect(st){
+  var nr = listChooserSelectedArray.indexOf(st);
+  if (nr!=-1){
+    listChooserSelectedArray.splice(nr,1);
+  }
+  document.getElementById("PChoose"+st+"B").innerHTML='<button class="p1 w4 default" onClick="PChooseselect(\''+st+'\')">'+listChooserOptionsDict[st]+'</button>';
+}
+
+function PChooseOK(){
+  var result="[";
+  for (var item in listChooserSelectedArray){
+    result+='"'+listChooserSelectedArray[item]+'",';
+  }
+  result=result.slice(0,-1)+"]";
+  sceneSetting(settingsMappings["views"],result);
+  TINY.box.hide();
+}
+
+//------------------------------ViewsChooseEnd------------------------------//
+
+function rename(button){
+  if (!top.user["parameters"]["isSceneEditor"] || sceneLocked){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  $(button).addClass('blinking');
+  omega.ShowInputBox({text:top.getText('rename',0),callback:rename2(top.sceneChoosen,button),preset:top.scenesIds[top.scenesFind[top.sceneChoosen]][1],parameters:{type:"text",maxlength:"18"}});
+  return true;
+}
+
+function rename2(preEvent,button){
+  return function(o){
+    if (o.OK){
+      omega.Request({"method":"sceneRename","args":[preEvent,o.data]});
+    }
+    $(button).removeClass('blinking');
+  }
+}
+
+function sceneMove(how){
+  if (!top.user["parameters"]["isSceneEditor"] || sceneLocked){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  omega.Request({"method":"sceneMove","args":[top.sceneChoosen,how,top.viewChoosen]});
+  return true;
+}
+
+function sceneSetting(settingId,value){
+  if (!top.user["parameters"]["isSceneEditor"] || (settingId!=settingsMappings["lockScene"] && sceneLocked) || (settingId==settingsMappings["lockScene"] && !top.user["parameters"]["isAdmin"])){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    return false;
+  }
+  omega.Request({"method":"sceneSetting","args":[top.sceneChoosen,settingId,value]});
+  return true;
+}
+
+var oldScene=-1;
+var sceneHidden=0;
+var sceneLocked=0;
+omega.OnUpdate(function(ext){
+    var settings = top.scenesIds[top.scenesFind[top.sceneChoosen]];
+    if (ext=="reload" || ext=="load" && oldScene!=top.sceneChoosen){
+        oldScene=top.sceneChoosen;
+        setConfig("retriggerBehaviour",settings[settingsMappings["retriggerBehaviour"]]||0);
+        setConfig("onStart",settings[settingsMappings["onStart"]]||0);
+        if (boxOpen=="selectViews"){
+            selectViewsF(document.getElementById("viewsB"));
+        }
+    }
+    sceneHidden=settings[settingsMappings["hideScene"]]||0;
+    if (sceneHidden==1){
+        document.getElementById('showSceneB').innerHTML='<button class="p1 w2 green" onClick="sceneSetting(settingsMappings[\'hideScene\'],0);">'+top.getText('hide',0)+'</button>';
+    }
+    else{
+        document.getElementById('showSceneB').innerHTML='<button class="p1 w2 default" onClick="sceneSetting(settingsMappings[\'hideScene\'],1);">'+top.getText('hide',0)+'</button>';
+    }
+    sceneLocked=settings[settingsMappings["lockScene"]]||0;
+    if (sceneLocked==1){
+        document.getElementById('lockSceneB').innerHTML='<button class="p1 w2 green" onClick="sceneSetting(settingsMappings[\'lockScene\'],0);">'+top.getText("sceneSettingslockScene","name")+'</button>';
+    }
+    else{
+        document.getElementById('lockSceneB').innerHTML='<button class="p1 w2 default" onClick="sceneSetting(settingsMappings[\'lockScene\'],1);">'+top.getText("sceneSettingslockScene","name")+'</button>';
+    }
+});
+
+omega.OnLoad(function(){
+    document.getElementById('rename').innerHTML=top.getText('rename',0);
+    document.getElementById('views').innerHTML=top.getText('devframe','views')+"...";
+    document.getElementById('sceneOptionsT').innerHTML='<button id="sceneOptionsTitle" class="p2 w6 defaultNH">'+top.getText('sceneOrganize',0)+':</button>';
+});
+
+</script>
+
+</head>
+
+<body>
+<center>
+<table style="width:100%;" border="0" cellpadding="0" cellspacing="0">
+    <tr valign="top" class="title">
+    </tr>
+    <tr align="center" valign="top">
+      <td align="center" colspan="2">
+        <table border="0" cellpadding="0" cellspacing="0">
+            <tr valign="top">
+              <td id="onStartContent"></td>
+              <td id="retriggerBehaviourContent"></td>
+              <td id="lockSceneContent"></td>
+            </tr>
+            <tr class="HSpace medium"></tr>
+            <tr>
+              <table class="stdtable" border="0" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td id="sceneOptionsT" colspan="3"></td>
+                  </tr>
+                  <tr>
+                    <td><button class="p1 w2 default" onClick="sceneMove('up');"><img src="/img/up2.png" /></button></td>
+                    <td><div id="showSceneB"></div></td>
+                    <td><button id="viewsB" class="p1 w2 default" onClick="selectViewsF(this);" accesskey="V"><div id="views"></div></button></td>
+                  </tr>
+                  <tr>
+                    <td><button class="p1 w2 default" onClick="sceneMove('down');"><img src="/img/down2.png" /></button></td>
+                    <td><div id="lockSceneB"></div></td>
+                    <td><button id="renameB" class="p1 w2 default" onClick="rename(this);" accesskey="R"><div id="rename"></div></button></td>
+                  </tr>
+              </table>
+            </tr>
+        </table>
+      </td>
+    </tr>
+</table>
+</center>
+</body>
+</html>

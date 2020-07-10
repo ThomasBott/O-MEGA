@@ -1,0 +1,105 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta http-equiv="Expires" content="0">
+
+<title>Explorer</title>
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/tinybox.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+</head>
+
+<body style="overflow:hidden;">
+<div id="pathShow" class="selectable title2"></div>
+<table style="height:100%; width:100%;" border="0" cellpadding="0" cellspacing="0">
+  <tr>
+    <td id="browsercontentC" align="center">
+      <table style="height:100%; width:100%;" border="0" cellpadding="0" cellspacing="0">
+        <tr class="title">
+          <td>&nbsp;<br></td>
+        </tr>
+        <tr class="shrinkH">
+          <td>
+            <table class="fill" style="max-width:1000px; margin:auto;" border="0" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="left">
+                  <table class="stdtable" style="width:100%" border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="width:1px"><div id="backB"></div></td>
+                      <td style="width:1px"><div id="upB"></div></td>
+                      <td style="width:1px"><div id="navigationB"></div></td>
+                      <td style="width:1px"><div id="fileOperationsB"></div></td>
+                      <td style="width:1px"><div id="advancedB"></div></td>
+                      <td class="last" align="right"><div id="secoundBrowserB"></div></td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div style="display:none;" id="navigation">
+                    <table class="stdtable" border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td><div id="rootB"></div></td>
+                        <td><div id="homeB"></div></td>
+                        <td><div id="searchBox"></div></td>
+                        <td class="last"><div id="searchB"></div></td>
+                        <!--<td><div id="searchResetB"></div></td>-->
+                      </tr>
+                    </table>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div style="display:none;" id="fileOperations">
+                    <table class="stdtable" border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td><div id="selectAllB"></div></td>
+                        <td><div id="selectInvertB"></div></td>
+                        <td><div id="newFolderB"></div></td>
+                        <td><div id="cutB"></div></td>
+                        <td><div id="copyB"></div></td>
+                        <td><div id="pasteB"></div></td>
+                        <td><div id="renameB"></div></td>
+                        <td class="last"><div id="deleteB"></div></td>
+                      </tr>
+                    </table>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div style="display:none;" id="advanced">
+                    <table class="stdtable" border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td><div id="openWithB"></div></td>
+                        <td><div id="pasteSpecialB"></div></td>
+                        <td><div id="createLinksB"></div></td>
+                        <td><div id="propertiesB"></div></td>
+                        <td class="last"><div id="closeWindowB"></div></td>
+                      </tr>
+                    </table>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr style="height:3px"></tr>
+        <tr>
+          <td style="top:0px; bottom:0px; position:relative;" align="center"><iframe src="browserContentframe.html" name="browserContentframe" id="browserContentframe" frameborder="0" style="height:100%; width:100%; max-width:1000px;" allowtransparency="true"></iframe></td>
+        </tr>
+      </table>
+    </td>
+    <td id="browserframe2C" style="display:none; width:50%;" align="center">
+      <iframe name="browserframe2" id="browserframe2" src="/systemTemplates/system/loading.html" frameborder="0" style="height:100%; width:100%; max-width:1000px;" allowtransparency="true"></iframe>
+    </td>
+  </tr>
+</table>          
+</body>
+</html>

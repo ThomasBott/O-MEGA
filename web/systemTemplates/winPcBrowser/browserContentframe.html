@@ -1,0 +1,24 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<title>Explorer-Content</title>
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+function contenter(container, contentvar){
+  document.getElementById(container).innerHTML = contentvar;
+}
+omega.OnLoad(function(){
+  parent.browserStart();
+  $(document).bind('touchstart',function(e){
+    parent.blurBox();
+  });
+});
+</script>
+</head>
+<body style="margin-top:-3px; overflow-x:hidden;">
+<div id="content"></div>
+</body>
+</html>

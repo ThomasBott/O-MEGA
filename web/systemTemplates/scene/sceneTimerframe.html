@@ -1,0 +1,928 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+var choosenMode;
+var sceneModes = [1,2,3,4,0,5];
+var newSched;
+var startSecs=false;
+var startTime;
+var aktiveMonths;
+var aktiveDays;
+var aktiveWeeks;
+var aktiveWeekDays;
+var period;
+
+//----------------------startTimeStart----------------------//
+function timeChange(how,what){
+  if (how!=0){
+    startTime[what]=parseInt(startTime[what])+how;
+    if (what==0){
+      if (startTime[what]>23){
+        startTime[what]=0;
+      }
+      else if(startTime[what]<0){
+        startTime[what]=23;
+      }
+    }
+    else{
+      if (startTime[what]>59){
+        startTime[what]-=60;
+        timeChange(1,what-1);
+      }
+      else if(startTime[what]<0){
+        startTime[what]+=60;
+        timeChange(-1,what-1);
+      }
+    }
+  }
+  else{
+    startTime[0]=parseInt(startTime[0]);
+    startTime[1]=parseInt(startTime[1]);
+    startTime[2]=parseInt(startTime[2]);
+  }
+  document.getElementById('startTime0B').innerHTML=top.getText('timeFormat',2)+":<br>"+top.addZeroToTime(startTime[0]);
+  document.getElementById('startTime1B').innerHTML=top.getText('timeFormat',1)+":<br>"+top.addZeroToTime(startTime[1]);
+  document.getElementById('startTime2B').innerHTML=top.getText('timeFormat',0)+":<br>"+top.addZeroToTime(startTime[2]);
+}
+//----------------------startTimeEnd----------------------//
+//----------------------monthsStart------------------------//
+function MonthsFAktivate(monthNr){
+  var tempIndex=aktiveMonths.indexOf(monthNr);
+  if (tempIndex==-1){
+    aktiveMonths.push(monthNr);
+  }
+  else{
+    aktiveMonths.splice(tempIndex,1);
+  }
+  MonthsF();
+}
+
+function MonthsF(){
+  for (var i=1; i<=12; i++){ 
+    var i2=Math.pow(2,(i-1));
+    if (aktiveMonths.indexOf(i)!=-1){  
+      document.getElementById('month'+i).innerHTML ='<button class="p1 w1 green" onClick="MonthsFAktivate('+i+');">'+top.getText('months',i2)+'</button>';
+    }
+    else{
+      document.getElementById('month'+i).innerHTML ='<button class="p1 w1 default" onClick="MonthsFAktivate('+i+');">'+top.getText('months',i2)+'</button>';
+    }
+  }
+}
+
+//---------------------monthsEnd------------------------//
+//----------------------monthDaysStart-----------------------//
+
+function DaysFAktivate(dayNr){
+  var tempIndex=aktiveDays.indexOf(dayNr);
+  if (tempIndex==-1){
+    aktiveDays.push(dayNr);
+  }
+  else{
+    aktiveDays.splice(tempIndex,1);
+  }
+  DaysF();
+}
+
+function DaysF(){
+  for (var i=1; i<=31; i++){ 
+    var i2=Math.pow(2,(i-1));
+    if (aktiveDays.indexOf(i)!=-1){ 
+      document.getElementById('d'+i).innerHTML ='<button class="p1 w1 green" onClick="DaysFAktivate('+i+');">'+i+'</button>';
+    }
+    else{
+      document.getElementById('d'+i).innerHTML ='<button class="p1 w1 default" onClick="DaysFAktivate('+i+');">'+i+'</button>';
+    }
+  }
+}
+//----------------------monthDaysEnd-------------------------//
+//----------------------weeksStart-----------------------//
+function WeeksFAktivate(weekNr){
+  var tempIndex=aktiveWeeks.indexOf(weekNr);
+  if (tempIndex==-1){
+    aktiveWeeks.push(weekNr);
+  }
+  else{
+    aktiveWeeks.splice(tempIndex,1);
+  }
+  WeeksF();
+}
+
+function WeeksF(){
+  for (var i=1; i<=6; i++){ 
+    var i2=Math.pow(2,(i-1));
+    if (aktiveWeeks.indexOf(i)!=-1){  
+      document.getElementById('w'+i).innerHTML ='<button class="p1 w1 green" onClick="WeeksFAktivate('+i+');">'+top.getText('weeks',i2)+'</button>';
+    }
+    else{
+      document.getElementById('w'+i).innerHTML ='<button class="p1 w1 default" onClick="WeeksFAktivate('+i+');">'+top.getText('weeks',i2)+'</button>';
+    }
+  }
+}
+//----------------------weeksEnd-------------------------//
+//----------------------weekDaysStart-----------------------//
+function WeekDaysFAktivate(weekDayNr){
+  var tempIndex=aktiveWeekDays.indexOf(weekDayNr);
+  if (tempIndex==-1){
+    aktiveWeekDays.push(weekDayNr);
+  }
+  else{
+    aktiveWeekDays.splice(tempIndex,1);
+  }
+  WeekDaysF();
+}
+
+function WeekDaysF(){
+  for (var i=1; i<=7; i++){ 
+    var i2=Math.pow(2,(i-1));
+    if (aktiveWeekDays.indexOf(i)!=-1){  
+      document.getElementById('wd'+i).innerHTML ='<button class="p1 w1 green" onClick="WeekDaysFAktivate('+i+');">'+top.getText('days',i2)+'</button>';
+    }
+    else{
+      document.getElementById('wd'+i).innerHTML ='<button class="p1 w1 default" onClick="WeekDaysFAktivate('+i+');">'+top.getText('days',i2)+'</button>';
+    }
+  }
+}
+//----------------------weekDaysEnd-------------------------//
+//----------------------periodStart-------------------------//
+function FormatF(format){
+  var tempContent='<select id="formatSelector" class="p1 w2 default">';
+  for (var i=0;i<7;i++){
+    if(i==format){
+      tempContent+='<option value='+i+' selected="selected">'+top.getText('timeFormat',i)+'</option>';
+    }
+    else{
+      tempContent+='<option value='+i+'>'+top.getText('timeFormat',i)+'</option>';
+    }
+  }
+  tempContent+='</select>';
+  document.getElementById('formatO').innerHTML =tempContent;
+}
+
+function getFormat(){
+  var e = document.getElementById("formatSelector");
+  return parseInt(e.options[e.selectedIndex].value,10);
+}
+
+function periodChange(change){
+  period+=change;
+  if (period<1){
+    period=1;
+  }
+  document.getElementById("periodB").innerHTML=period;
+}
+//----------------------periodEnd---------------------------//
+//----------------------noHolidayStart----------------------//
+var noHolidayVar=0;
+
+function NoHolidayF(newState){
+  var tempContent='<button class="p1 w1 ';
+  if (newState==1){
+    AddHolidayF(0);
+    AddHoliday2F(0);
+    tempContent+='green" onMouseDown="NoHolidayF(0);"';
+  }
+  else{
+    tempContent+='default" onMouseDown="NoHolidayF(1);"';
+  }
+  tempContent+='></button>';
+  noHolidayVar=newState;
+  document.getElementById('noHolidayB').innerHTML=tempContent;
+}
+//----------------------noHolidayEnd------------------------//
+//----------------------addHolidayStart----------------------//
+var addHolidayVar=0;
+
+function AddHolidayF(newState){
+  var tempContent='<button class="p1 w1 ';
+  if (newState==1){
+    NoHolidayF(0);
+    NoHoliday2F(0);
+    tempContent+='green" onMouseDown="AddHolidayF(0);"';
+  }
+  else{
+    tempContent+='default" onMouseDown="AddHolidayF(1);"';
+  }
+  tempContent+='></button>';
+  addHolidayVar=newState;
+  document.getElementById('addHolidayB').innerHTML=tempContent;
+}
+//----------------------addHolidayEnd------------------------//
+//----------------------noHoliday2Start----------------------//
+var noHolidayVar2=0;
+
+function NoHoliday2F(newState){
+  var tempContent='<button class="p1 w1 ';
+  if (newState==1){
+    AddHoliday2F(0);
+    AddHolidayF(0);
+    tempContent+='green" onMouseDown="NoHoliday2F(0);"';
+  }
+  else{
+    tempContent+='default" onMouseDown="NoHoliday2F(1);"';
+  }
+  tempContent+='></button>';
+  noHolidayVar2=newState;
+  document.getElementById('noHoliday2B').innerHTML=tempContent;
+}
+//----------------------noHoliday2End------------------------//
+//----------------------addHoliday2Start----------------------//
+var addHolidayVar2=0;
+
+function AddHoliday2F(newState){
+  var tempContent='<button class="p1 w1 ';
+  if (newState==1){
+    NoHoliday2F(0);
+    NoHolidayF(0);
+    tempContent+='green" onMouseDown="AddHoliday2F(0);"';
+  }
+  else{
+    tempContent+='default" onMouseDown="AddHoliday2F(1);"';
+  }
+  tempContent+='></button>';
+  addHolidayVar2=newState;
+  document.getElementById('addHoliday2B').innerHTML=tempContent;
+}
+//----------------------addHoliday2End------------------------//
+
+function getStartDate(){
+  var date=document.getElementById('date').value;
+  //console.log(date);
+  return date;
+}
+
+function getStartTime(){
+  return top.addZeroToTime(startTime[0])+":"+top.addZeroToTime(startTime[1])+":"+top.addZeroToTime(startTime[2]);
+}
+
+function getWeekDays(){
+  var daysWeek=0;
+  for (var i=0; i<aktiveWeekDays.length; i++){
+    daysWeek+=Math.pow(2,parseInt(aktiveWeekDays[i]-1));
+  }
+  return daysWeek;
+}
+
+function getWeeks(){
+  var weeks=0;
+  for (var i=0; i<aktiveWeeks.length; i++){
+    weeks+=Math.pow(2,parseInt(aktiveWeeks[i]-1));
+  }
+  return weeks;
+}
+
+function getMonths(){
+  var months1=0;
+  var months2=0;
+  for (var i=0; i<aktiveMonths.length; i++){
+    var temp=Math.pow(2,parseInt(aktiveMonths[i]-1));
+    if (parseInt(aktiveMonths[i])>6){
+      temp=temp/64;
+      months2+=temp;
+    }
+    else{
+      months1+=temp;
+    }
+  }
+  return [months1,months2];
+}
+
+function getDays(){
+  var days1=0;
+  var days2=0;
+  var days3=0;
+  var days4=0;
+  for (var i=0; i<aktiveDays.length; i++){
+    var temp=Math.pow(2,parseInt(aktiveDays[i]-1));
+    if (parseInt(aktiveDays[i])>24){
+      temp=temp/16777216;
+      days4+=temp;
+    }
+    else if (parseInt(aktiveDays[i])>16){
+      temp=temp/65536;
+      days3+=temp;
+    }
+    else if (parseInt(aktiveDays[i])>8){
+      temp=temp/256;
+      days2+=temp;
+    }
+    else{
+      days1+=temp;
+    }
+  }
+  return [days1,days2,days3,days4];
+}
+
+function save(test){
+  test=test||false;
+  var error=false;
+  newSched[0]=parseInt(top.scenes[foundScene][0]);
+  switch (newSched[2]){
+    case 0:
+      var time=getStartTime();
+      var date=getStartDate();
+      if (date!=false){
+        newSched[3]=[time,"00:00:00",date,0];
+      }
+      else{
+        error=true;
+      }
+      break;
+    case 1:
+      var time=getStartTime();
+      newSched[3]=[time,"00:00:00"];
+      break;
+    case 2:
+      var time=getStartTime();
+      var daysWeek=getWeekDays();
+      newSched[3]=[time,"00:00:00",daysWeek,addHolidayVar,noHolidayVar,addHolidayVar2,noHolidayVar2];
+      break;
+    case 3:
+      var time=getStartTime();
+      var weeks=getWeeks();
+      var daysWeek=getWeekDays();
+      var months=getMonths();
+      newSched[3]=[time,"00:00:00",weeks,daysWeek,months[0],months[1],noHolidayVar,noHolidayVar2];
+      break;
+    case 4:
+      var time=getStartTime();
+      var days=getDays();
+      var months=getMonths();
+      newSched[3]=[time,"00:00:00",days[0],days[1],days[2],days[3],months[0],months[1]];
+      break;
+    case 5:
+      var time=getStartTime();
+      var date=getStartDate();
+      var format = getFormat();
+      if (date!=false){
+        newSched[3]=[time,"00:00:00",date,period,format];
+      }
+      else{
+        error=true;
+      }
+      break;
+    default:
+      console.log("mode "+mode+" not supported!");
+  }
+  newSched[4]=top.scenes[foundScene][4];
+  if (!test){
+    if (error){
+      alert("Date is missing!");
+    }
+    else{
+      var command=JSON.stringify({'method':'sceneSave','args':[top.sceneChoosen,JSON.stringify(newSched)]});
+      top.saveConfig(command);
+    }
+  }
+}
+
+
+function clearAll(){
+  aktiveMonths = [];
+  aktiveDays = [];
+  aktiveWeekDays = [];
+  aktiveWeeks = [];
+  period=1;
+  periodChange(0);
+  FormatF(2);
+  document.getElementById('date').innerHTML="";
+  WeekDaysF();
+  WeeksF();
+  MonthsF();
+  DaysF();
+  startTime=[0,0,0];
+  timeChange();
+  NoHolidayF(0);
+  AddHolidayF(0);
+  NoHoliday2F(0);
+  AddHoliday2F(0);
+}
+
+function init(mode){
+  switch (mode){
+    case 0:
+      $("#monthsT").hide();
+      $("#weeksT").hide();
+      $("#weekDaysT").hide();
+      $("#MonthDaysT").hide();
+      $("#periodT").hide();
+      $("#noHolidayT").hide();
+      $("#addHolidayT").hide();
+      var date="";
+      if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==0||top.scenes[top.scenesFindData[top.sceneChoosen]][2]==5){
+        date=top.scenes[top.scenesFindData[top.sceneChoosen]][3][2];
+      }
+	  document.getElementById('date').value=date;
+      newSched[3]=[top.scenes[top.scenesFindData[top.sceneChoosen]][3][0],"00:00:00",date,0];
+      $("#dateT").show();
+      break;
+    case 1:
+      $("#monthsT").hide();
+      $("#weeksT").hide();
+      $("#weekDaysT").hide();
+      $("#MonthDaysT").hide();
+      $("#dateT").hide();
+      $("#periodT").hide();
+      $("#noHolidayT").hide();
+      $("#addHolidayT").hide();
+      newSched[3]=[top.scenes[top.scenesFindData[top.sceneChoosen]][3][0],"00:00:00"];
+      break;
+    case 2:
+      $("#monthsT").hide();
+      $("#weeksT").hide();
+      $("#weekDaysT").show();
+      $("#MonthDaysT").hide();
+      $("#dateT").hide();
+      $("#periodT").hide();
+      $("#noHolidayT").show();
+      $("#addHolidayT").show();
+      var daysWeek=0;
+      if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==2){
+        daysWeek=top.scenes[top.scenesFindData[top.sceneChoosen]][3][2];
+      }
+      else if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==3){
+        daysWeek=top.scenes[top.scenesFindData[top.sceneChoosen]][3][3];
+      }
+      var addHoliday=0;
+      if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==2){
+        addHoliday=top.scenes[top.scenesFindData[top.sceneChoosen]][3][3];
+      }
+      AddHolidayF(addHoliday);
+      var addHoliday2=0;
+      if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==2){
+        addHoliday2=top.scenes[top.scenesFindData[top.sceneChoosen]][3][5]||0;
+      }
+      AddHoliday2F(addHoliday2);
+      var noHoliday=0;
+      if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==3){
+        noHoliday=top.scenes[top.scenesFindData[top.sceneChoosen]][3][6];
+      }
+      else if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==2){
+        noHoliday=top.scenes[top.scenesFindData[top.sceneChoosen]][3][4];
+      }
+      NoHolidayF(noHoliday);
+      var noHoliday2=0;
+      if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==3){
+        noHoliday2=top.scenes[top.scenesFindData[top.sceneChoosen]][3][7]||0;
+      }
+      else if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==2){
+        noHoliday2=top.scenes[top.scenesFindData[top.sceneChoosen]][3][6]||0;
+      }
+      NoHoliday2F(noHoliday2);
+      newSched[3]=[top.scenes[top.scenesFindData[top.sceneChoosen]][3][0],"00:00:00",daysWeek,addHoliday,noHoliday,addHoliday2,noHoliday2];
+      var value=daysWeek.toString(2);
+      aktiveWeekDays=top.sceneCalculateDaysMonths(value);
+      WeekDaysF();
+      break;
+    case 3:
+      $("#monthsT").show();
+      $("#weeksT").show();
+      $("#weekDaysT").show();
+      $("#MonthDaysT").hide();
+      $("#dateT").hide();
+      $("#periodT").hide();
+      $("#noHolidayT").show();
+      $("#addHolidayT").hide();
+      var weeks=0;
+      if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==3){
+        weeks=top.scenes[top.scenesFindData[top.sceneChoosen]][3][2];
+      }
+      var daysWeek=0;
+      if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==2){
+        daysWeek=top.scenes[top.scenesFindData[top.sceneChoosen]][3][2];
+      }
+      else if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==3){
+        daysWeek=top.scenes[top.scenesFindData[top.sceneChoosen]][3][3];
+      }
+      var months1=0;
+      var months2=0;
+      if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==3){
+        months1=top.scenes[top.scenesFindData[top.sceneChoosen]][3][4];
+        months2=top.scenes[top.scenesFindData[top.sceneChoosen]][3][5];
+      }
+      else if(top.scenes[top.scenesFindData[top.sceneChoosen]][2]==4){
+        months1=top.scenes[top.scenesFindData[top.sceneChoosen]][3][6];
+        months2=top.scenes[top.scenesFindData[top.sceneChoosen]][3][7];
+      }
+      var noHoliday=0;
+      if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==3){
+        noHoliday=top.scenes[top.scenesFindData[top.sceneChoosen]][3][6];
+      }
+      else if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==2){
+        noHoliday=top.scenes[top.scenesFindData[top.sceneChoosen]][3][4];
+      }
+      NoHolidayF(noHoliday);
+      newSched[3]=[top.scenes[top.scenesFindData[top.sceneChoosen]][3][0],"00:00:00",weeks,daysWeek,months1,months2,noHoliday];
+      var value=(months1+64*months2).toString(2);
+      aktiveMonths=top.sceneCalculateDaysMonths(value);
+      var value=daysWeek.toString(2);
+      aktiveWeekDays=top.sceneCalculateDaysMonths(value);
+      var value=weeks.toString(2);
+      aktiveWeeks=top.sceneCalculateDaysMonths(value);
+      MonthsF();
+      WeekDaysF();
+      WeeksF();
+      break;
+    case 4:
+      $("#monthsT").show();
+      $("#weeksT").hide();
+      $("#weekDaysT").hide();
+      $("#MonthDaysT").show();
+      $("#dateT").hide();
+      $("#periodT").hide();
+      $("#noHolidayT").hide();
+      $("#addHolidayT").hide();
+      var days1=0;
+      var days2=0;
+      var days3=0;
+      var days4=0;
+      if(top.scenes[top.scenesFindData[top.sceneChoosen]][2]==4){
+        days1=top.scenes[top.scenesFindData[top.sceneChoosen]][3][2];
+        days2=top.scenes[top.scenesFindData[top.sceneChoosen]][3][3];
+        days3=top.scenes[top.scenesFindData[top.sceneChoosen]][3][4];
+        days4=top.scenes[top.scenesFindData[top.sceneChoosen]][3][5];
+      }
+      var months1=0;
+      var months2=0;
+      if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==3){
+        months1=top.scenes[top.scenesFindData[top.sceneChoosen]][3][4];
+        months2=top.scenes[top.scenesFindData[top.sceneChoosen]][3][5];
+      }
+      else if(top.scenes[top.scenesFindData[top.sceneChoosen]][2]==4){
+        months1=top.scenes[top.scenesFindData[top.sceneChoosen]][3][6];
+        months2=top.scenes[top.scenesFindData[top.sceneChoosen]][3][7];
+      }
+      newSched[3]=[top.scenes[top.scenesFindData[top.sceneChoosen]][3][0],"00:00:00",days1,days2,days3,days4,months1,months2];
+      var value=(months1+64*months2).toString(2);
+      aktiveMonths=top.sceneCalculateDaysMonths(value);
+      var value=(days1+256*days2+65536*days3+16777216*days4).toString(2);
+      aktiveDays=top.sceneCalculateDaysMonths(value);
+      MonthsF();
+      DaysF();
+      break;
+    case 5:
+      $("#monthsT").hide();
+      $("#weeksT").hide();
+      $("#weekDaysT").hide();
+      $("#MonthDaysT").hide();
+      var date="";
+      if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==0||top.scenes[top.scenesFindData[top.sceneChoosen]][2]==5){
+        date=top.scenes[top.scenesFindData[top.sceneChoosen]][3][2];
+      }
+	  document.getElementById('date').value=date;
+      if (top.scenes[top.scenesFindData[top.sceneChoosen]][2]==5){
+        period=top.scenes[top.scenesFindData[top.sceneChoosen]][3][3];
+        FormatF(top.scenes[top.scenesFindData[top.sceneChoosen]][3][4]);
+      }
+      else{
+        period=1;
+        FormatF(2);
+      }
+      periodChange(0);
+      var format = getFormat();
+      newSched[3]=[top.scenes[top.scenesFindData[top.sceneChoosen]][3][0],"00:00:00",date,period,format];
+      $("#dateT").show();
+      $("#periodT").show();
+      $("#noHolidayT").hide();
+      $("#addHolidayT").hide();
+      break;
+    default:
+      console.log("mode "+mode+" not supported!");
+  }
+  newSched[2]=mode;
+  startTime=top.scenes[top.scenesFindData[top.sceneChoosen]][3][0].split(":");
+  timeChange(0,3);
+}
+
+function modeF(mode){
+  choosenMode=mode;
+  for (var i=0; i<sceneModes.length; i++){
+    if (sceneModes[i]==choosenMode){
+      document.getElementById("mode"+sceneModes[i]+"B").innerHTML='<button class="p1 w2 green">'+top.getText('sceneModes',sceneModes[i])+'</button>';
+    }
+    else{
+      document.getElementById("mode"+sceneModes[i]+"B").innerHTML='<button class="p1 w2 default" onClick="modeF('+sceneModes[i]+')">'+top.getText('sceneModes',sceneModes[i])+'</button>';
+    }
+  }
+  init(choosenMode);
+}
+
+function chooseTablePrint(){
+  var tablestr='<table class="rightBorder" cellpadding="0" cellspacing="3"><tr><td><button class="p2 w2 defaultNH">'+top.getText('mode',0)+':</button></td></tr>';
+  for (var i=0; i<sceneModes.length; i++){
+    tablestr+='<tr><td><div id="mode'+sceneModes[i]+'B"><button class="p1 w2 default"></button></div></td></tr>';
+  }
+  tablestr+='</table>';
+  document.getElementById('chooserT').innerHTML=tablestr;
+}
+
+var foundScene;
+var oldScene=-1;
+omega.OnUpdate(function(ext){
+  if (ext=="reload" || ext=="load" && oldScene!=top.sceneChoosen){
+    oldScene=top.sceneChoosen;
+    foundScene=top.scenesFindData[top.sceneChoosen];
+    choosenMode=parseInt(top.scenes[foundScene][2]);
+    newSched=[parseInt(top.scenes[foundScene][0]),top.scenes[foundScene][1],top.scenes[foundScene][2],top.scenes[foundScene][3],top.scenes[foundScene][4],"O-CMD","sceneStart","",""+top.sceneChoosen];
+    modeF(choosenMode);
+  }
+});
+
+omega.OnLoad(function(){
+    chooseTablePrint();
+    
+    document.getElementById('dateTitle').innerHTML=top.getText('date',0)+":";
+    
+    document.getElementById('monthsTitle').innerHTML=top.getText('months',0)+":";
+    document.getElementById('daysTitle').innerHTML=top.getText('days',0)+":";
+    document.getElementById('weekDaysTitle').innerHTML=top.getText('days',0)+":";
+    document.getElementById('weeksTitle').innerHTML=top.getText('weeks',0)+":";
+    document.getElementById('startTimeTitle').innerHTML=top.getText('startTime',0)+":";
+    document.getElementById('periodTitle').innerHTML=top.getText('repeatEvery',0)+":";
+    document.getElementById('noHolidayTitle').innerHTML=top.getText('sceneTimer','noHoliday');
+    document.getElementById('addHolidayTitle').innerHTML=top.getText('sceneTimer','addHoliday');
+    document.getElementById('noHoliday2Title').innerHTML=top.getText('sceneTimer','noHoliday2');
+    document.getElementById('addHoliday2Title').innerHTML=top.getText('sceneTimer','addHoliday2');
+    omega.ApplyHandlerRepeat({targetId:"timeChanger100",func:function(){timeChange(10,0);}});
+    omega.ApplyHandlerRepeat({targetId:"timeChanger10",func:function(){timeChange(1,0);}});
+    omega.ApplyHandlerRepeat({targetId:"timeChanger101",func:function(){timeChange(10,1);}});
+    omega.ApplyHandlerRepeat({targetId:"timeChanger11",func:function(){timeChange(1,1);}});
+    omega.ApplyHandlerRepeat({targetId:"timeChanger102",func:function(){timeChange(10,2);}});
+    omega.ApplyHandlerRepeat({targetId:"timeChanger12",func:function(){timeChange(1,2);}});
+    omega.ApplyHandlerRepeat({targetId:"timeChangerN100",func:function(){timeChange(-10,0);}});
+    omega.ApplyHandlerRepeat({targetId:"timeChangerN10",func:function(){timeChange(-1,0);}});
+    omega.ApplyHandlerRepeat({targetId:"timeChangerN101",func:function(){timeChange(-10,1);}});
+    omega.ApplyHandlerRepeat({targetId:"timeChangerN11",func:function(){timeChange(-1,1);}});
+    omega.ApplyHandlerRepeat({targetId:"timeChangerN102",func:function(){timeChange(-10,2);}});
+    omega.ApplyHandlerRepeat({targetId:"timeChangerN12",func:function(){timeChange(-1,2);}});
+    omega.ApplyHandlerRepeat({targetId:"periodChanger1",func:function(){periodChange(1);}});
+    omega.ApplyHandlerRepeat({targetId:"periodChangerN1",func:function(){periodChange(-1);}});
+    omega.OnBeforeUnload(function (){
+      save(true);
+      if (top.user["parameters"]["isSceneEditor"] && top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==0 && JSON.stringify(newSched)!=JSON.stringify([parseInt(top.scenes[foundScene][0]),top.scenes[foundScene][1],top.scenes[foundScene][2],top.scenes[foundScene][3],top.scenes[foundScene][4],"O-CMD","sceneStart","",""+top.sceneChoosen])){
+        if (!confirm(omega.GetText('discardUnsavedSettings'))){
+          return false;
+        }
+      }
+    });
+    if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+        return false;
+    }
+    document.getElementById("okB").innerHTML = '<button class="p1 w2 default Hgreen" onClick="save();">'+top.getText('saveChanges',0)+'</button>';
+    document.getElementById("clearB").innerHTML = '<button class="p1 w2 default Hred" onClick="clearAll();">'+top.getText('clearSettings',0)+'</button>';
+});
+
+</script>
+
+</head>
+
+<body>
+<div id="pickabox" style="position:absolute; right:0; top:0;"></div>
+<center>
+<table style="width:100%;" border="0" cellpadding="0" cellspacing="0">
+    <tr valign="top" class="title">
+      <td colspan="2" align="right">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td><div id="clearB"></div></td>
+            <td class="border3"></td>
+            <td><div id="okB"></div></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr align="center" valign="top">
+      <td style="width:1px;"><div id="chooserT"></div></td>
+      <td>
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr id="dateT">
+            <td>
+              <table border="0" cellpadding="0" cellspacing="3">
+                <tr>
+                  <td colspan="2"><button id="dateTitle" class="p2 w6 defaultNH left"></button></td>
+                </tr>
+                <tr>
+                  <td><input id="date" class="p1 w6 default" type="date"></input></td>
+                </tr>
+                <tr class="HSpace"></tr>
+              </table>
+            </td>
+          </tr>
+          <tr id="monthsT">
+            <td>
+              <table border="0" cellpadding="0" cellspacing="3">
+                <tr>
+                  <td colspan="6"><button id="monthsTitle" class="p2 w6 defaultNH left"></button></td>
+                </tr>
+                <tr>
+                  <td><div id="month1"></div></td>
+                  <td><div id="month2"></div></td>
+                  <td><div id="month3"></div></td>
+                  <td><div id="month4"></div></td>
+                  <td><div id="month5"></div></td>
+                  <td><div id="month6"></div></td>
+                </tr>
+                <tr>
+                  <td><div id="month7"></div></td>
+                  <td><div id="month8"></div></td>
+                  <td><div id="month9"></div></td>
+                  <td><div id="month10"></div></td>
+                  <td><div id="month11"></div></td>
+                  <td><div id="month12"></div></td>
+                </tr>
+                <tr class="HSpace"></tr>
+              </table>
+            </td>
+          </tr>
+          <tr id="weeksT">
+            <td>
+              <table border="0" cellpadding="0" cellspacing="3">
+                <tr>
+                  <td colspan="6"><button id="weeksTitle" class="p2 w6 defaultNH left"></button></td>
+                </tr>
+                <tr>
+                  <td><div id="w1"></div></td>
+                  <td><div id="w2"></div></td>
+                  <td><div id="w3"></div></td>
+                  <td><div id="w4"></div></td>
+                  <td><div id="w5"></div></td>
+                  <td><div id="w6"></div></td>
+                </tr>
+                <tr class="HSpace"></tr>
+              </table>
+            </td>
+          </tr>
+          <tr id="weekDaysT">
+            <td>
+              <table border="0" cellpadding="0" cellspacing="3">
+                <tr>
+                  <td colspan="6"><button id="weekDaysTitle" class="p2 w6 defaultNH left"></button></td>
+                </tr>
+                <tr>
+                  <td><div id="wd1"></div></td>
+                  <td><div id="wd2"></div></td>
+                  <td><div id="wd3"></div></td>
+                  <td><div id="wd4"></div></td>
+                  <td><div id="wd5"></div></td>
+                  <td><button class="p1 w1 transparent1NH"></button></td>
+                </tr>
+                <tr>
+                  <td><div id="wd6"></div></td>
+                  <td><div id="wd7"></div></td>
+                  <td><button class="p1 w1 transparent1NH"></button></td>
+                  <td><button class="p1 w1 transparent1NH"></button></td>
+                  <td><button class="p1 w1 transparent1NH"></button></td>
+                  <td><button class="p1 w1 transparent1NH"></button></td>
+                </tr>
+                <tr class="HSpace"></tr>
+              </table>
+            </td>
+          </tr>
+          <tr id="MonthDaysT">
+            <td>
+              <table border="0" cellpadding="0" cellspacing="3">
+                <tr>
+                  <td colspan="6"><button id="daysTitle" class="p2 w6 defaultNH left"></button></td>
+                </tr>
+                <tr>
+                  <td><div id="d1"></div></td>
+                  <td><div id="d2"></div></td>
+                  <td><div id="d3"></div></td>
+                  <td><div id="d4"></div></td>
+                  <td><div id="d5"></div></td>
+                  <td><div id="d6"></div></td>
+                </tr>
+                <tr>
+                  <td><div id="d7"></div></td>
+                  <td><div id="d8"></div></td>
+                  <td><div id="d9"></div></td>
+                  <td><div id="d10"></div></td>
+                  <td><div id="d11"></div></td>
+                  <td><div id="d12"></div></td>
+                </tr>
+                <tr>
+                  <td><div id="d13"></div></td>
+                  <td><div id="d14"></div></td>
+                  <td><div id="d15"></div></td>
+                  <td><div id="d16"></div></td>
+                  <td><div id="d17"></div></td>
+                  <td><div id="d18"></div></td>
+                </tr>
+                <tr>
+                  <td><div id="d19"></div></td>
+                  <td><div id="d20"></div></td>
+                  <td><div id="d21"></div></td>
+                  <td><div id="d22"></div></td>
+                  <td><div id="d23"></div></td>
+                  <td><div id="d24"></div></td>
+                </tr>
+                <tr>
+                  <td><div id="d25"></div></td>
+                  <td><div id="d26"></div></td>
+                  <td><div id="d27"></div></td>
+                  <td><div id="d28"></div></td>
+                  <td><div id="d29"></div></td>
+                  <td><div id="d30"></div></td>
+                </tr>
+                <tr>
+                  <td><div id="d31"></div></td>
+                  <td><button class="p1 w1 transparent1NH"></button></td>
+                  <td><button class="p1 w1 transparent1NH"></button></td>
+                  <td><button class="p1 w1 transparent1NH"></button></td>
+                  <td><button class="p1 w1 transparent1NH"></button></td>
+                  <td><button class="p1 w1 transparent1NH"></button></td>
+                </tr>
+                <tr class="HSpace"></tr>
+              </table>
+            </td>
+          </tr>
+          <tr id="startT">
+            <td>
+              <table border="0" cellpadding="0" cellspacing="3">
+                <tr>
+                  <td colspan="6"><button id="startTimeTitle" class="p2 w6 defaultNH left"></button></td>
+                </tr>
+                <tr>
+              	  <td><button id="timeChanger100" class="p1 w1 default"><img src="/img/up2.png" /></button></td>
+                  <td><button id="timeChanger10" class="p1 w1 default"><img src="/img/up2.png" /></button></td>
+                  <td><button id="timeChanger101" class="p1 w1 default"><img src="/img/up2.png" /></button></td>
+                  <td><button id="timeChanger11" class="p1 w1 default"><img src="/img/up2.png" /></button></td>
+                  <td><button id="timeChanger102" class="p1 w1 default"><img src="/img/up2.png" /></button></td>
+                  <td><button id="timeChanger12" class="p1 w1 default"><img src="/img/up2.png" /></button></td>
+                </tr>
+                <tr>
+              	  <td colspan="2"><button id="startTime0B" class="p1 w2 defaultNH"></button></td>
+              	  <td colspan="2"><button id="startTime1B" class="p1 w2 defaultNH"></button></td>
+                  <td colspan="2"><button id="startTime2B" class="p1 w2 defaultNH"></button></td>
+                </tr>
+                <tr>
+              	  <td><button id="timeChangerN100" class="p1 w1 default"><img src="/img/down2.png" /></button></td>
+                  <td><button id="timeChangerN10" class="p1 w1 default"><img src="/img/down2.png" /></button></td>
+                  <td><button id="timeChangerN101" class="p1 w1 default"><img src="/img/down2.png" /></button></td>
+                  <td><button id="timeChangerN11" class="p1 w1 default"><img src="/img/down2.png" /></button></td>
+                  <td><button id="timeChangerN102" class="p1 w1 default"><img src="/img/down2.png" /></button></td>
+                  <td><button id="timeChangerN12" class="p1 w1 default"><img src="/img/down2.png" /></button></td>
+                </tr>
+                <tr class="HSpace"></tr>
+              </table>
+            </td>
+          </tr>
+          <tr id="periodT">
+            <td>
+              <table border="0" cellpadding="0" cellspacing="3">
+                <tr>
+                  <td colspan="4"><button id="periodTitle" class="p2 w6 defaultNH left"></button></td>
+                </tr>
+                <tr>
+                  <td><button id="periodChanger1" class="p1 w1 default"><img src="/img/up2.png" /></button></td>
+                  <td><button id="periodChangerN1" class="p1 w1 default"><img src="/img/down2.png" /></button></td>
+                  <td><button id="periodB" class="p1 w2 defaultNH"></button></td>
+                  <td><div id="formatO"></div></td>
+                </tr>
+                <tr class="HSpace"></tr>
+              </table>
+            </td>
+          </tr>
+          <tr id="noHolidayT">
+            <td>
+              <table border="0" cellpadding="0" cellspacing="3">
+                <tr>
+                  <td id="noHolidayB"></td>
+                  <td><button id="noHolidayTitle" class="p1 w5 defaultNH left" onClick="NoHolidayF(1);"></button></td>
+                </tr>
+                <tr>
+                  <td id="noHoliday2B"></td>
+                  <td><button id="noHoliday2Title" class="p1 w5 defaultNH left" onClick="NoHoliday2F(1);"></button></td>
+                </tr>
+                <tr class="HSpace"></tr>
+              </table>
+            </td>
+          </tr>
+          <tr id="addHolidayT">
+            <td>
+              <table border="0" cellpadding="0" cellspacing="3">
+                <tr>
+                  <td id="addHolidayB"></td>
+                  <td><button id="addHolidayTitle" class="p1 w5 defaultNH left" onClick="AddHolidayF(1);"></button></td>
+                </tr>
+                <tr>
+                  <td id="addHoliday2B"></td>
+                  <td><button id="addHoliday2Title" class="p1 w5 defaultNH left" onClick="AddHoliday2F(1);"></button></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+</table>
+</center>
+</body>
+</html>

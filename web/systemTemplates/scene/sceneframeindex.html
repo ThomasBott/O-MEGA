@@ -1,0 +1,189 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<title>PC</title>
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+var eventData;
+var onOffMapping=["[on]","[off]"];
+var onOffMapping1={1:"[on]",0:"[off]"};
+var activeStopMapping=["[activate]","[stop]"];
+var oldScene=-1;
+var tempEventData=[];
+var sceneTitle;
+omega.OnUpdate(function(ext){
+  var i=top.sceneChoosen;
+  if (ext=="load" && oldScene!=i || ext=="reload"){
+    var tempCommand={'method':'loadActionEventsFor','args':[encodeURIComponent("eg.plugins.SchedulGhost.RunScheduleImmediately(u'scene"+i+"',True)")],'callback':function(data){
+      if (data!="False"){
+        tempEventData=JSON.parse(data);
+        if (tempEventData.length>0){
+          document.getElementById("eventsYesNo").innerHTML=top.getText("yes",0);
+        }
+      }
+      else{
+        tempEventData=[];
+        document.getElementById("eventsYesNo").innerHTML=top.getText("no",0);
+      }
+    }};
+    omega.Request(tempCommand);
+  }
+  if (top.scenesIds[top.scenesFind[i]][1]==""){
+    sceneTitle=top.getText('files.json',omega.pageID)+'&nbsp;'+(i+1);
+  }
+  else{
+    sceneTitle=top.scenesIds[top.scenesFind[i]][1];
+  }
+  if (oldScene!=i){
+    omega.PAGE_TITLE=sceneTitle+':<br>('+omega.pageID+i+')';
+    document.getElementById('titleC').innerHTML=omega.PAGE_TITLE;
+  }
+  oldScene=i;
+  onOff(top.scenes[top.scenesFindData[i]][0]);
+  activeStop(top.scenesIds[top.scenesFind[i]][2]);
+  var tempArr=top.sceneMetadata(i);
+  var dayWeekMonth="";
+  var starttime=top.scenes[top.scenesFindData[i]][3][0];
+  if (tempArr[0]=='once'){
+    dayWeekMonth=top.getText(tempArr[0],0)+":<br>"+top.getText('date',0)+":<br>"+tempArr[4];
+    dayWeekMonth+="<br>"+top.getText('time',0)+":<br>"+starttime;
+  }
+  else if(tempArr[0]=='yearly'){
+    dayWeekMonth=top.getText(tempArr[0],0)+":<br>"+top.getText('date',0)+":<br>"+tempArr[4];
+    dayWeekMonth+="<br>"+top.getText('time',0)+":<br>"+starttime;
+  }
+  else if(tempArr[0]=='weekly'){
+    dayWeekMonth=top.getText(tempArr[0],0)+":<br>"+top.getText('days',0)+":<br>"+tempArr[1];
+    dayWeekMonth+="<br>"+top.getText('time',0)+":<br>"+starttime;
+  }
+  else if(tempArr[0]=='daily'){
+    dayWeekMonth=top.getText(tempArr[0],0)+":";
+    dayWeekMonth+="<br>"+top.getText('time',0)+":<br>"+starttime;
+  }
+  else if(tempArr[0]=='monthly'){
+    dayWeekMonth=top.getText(tempArr[0],0)+":<br>"+top.getText('months',0)+":<br>"+tempArr[3];
+    if (tempArr[2]!=""){
+      dayWeekMonth+="<br>"+top.getText('every',0)+" "+tempArr[2]+" "+top.getText('week',0);
+    }
+    dayWeekMonth+="<br>"+top.getText('days',0)+":<br>"+tempArr[1];
+    dayWeekMonth+="<br>"+top.getText('time',0)+":<br>"+starttime;
+  }
+  else{
+    dayWeekMonth=tempArr[0];
+  }
+  var events=top.getText("events",0)+':<br><div id="eventsYesNo">';
+  if (tempEventData.length>0){
+    events+=top.getText("yes",0)+'</div>';
+  }
+  else{
+    events+=top.getText("no",0)+'</div>';
+  }
+  var nextRun="<u>"+top.getText('nextRun',0)+":</u><br>";
+  if (top.scenesNextRunTime[top.scenesFindData[i]]!=""){
+    var tempArr=top.scenesNextRunTime[top.scenesFindData[i]].split(" ");
+    tempArr[0]=tempArr[0].split("-");
+    tempArr[0]=top.dateTransform(tempArr[0][2],tempArr[0][1],tempArr[0][0]);
+    nextRun+=top.getText('date',0)+":<br>"+tempArr[0]+"<br>"+top.getText('time',0)+":<br>"+tempArr[1];
+  }
+  else{
+    nextRun+=top.getText('never',0);
+  }
+  var lastRun="";
+  if (top.scenes[top.scenesFindData[i]][4]!=""){
+    var tempArr=top.scenes[top.scenesFindData[i]][4].split(" ");
+    tempArr[0]=tempArr[0].split("-");
+    tempArr[0]=top.dateTransform(tempArr[0][2],tempArr[0][1],tempArr[0][0]);
+    lastRun="<u>"+top.getText('lastRun',0)+":</u><br>"+top.getText('date',0)+":<br>"+tempArr[0]+"<br>"+top.getText('time',0)+":<br>"+tempArr[1];
+  }
+  document.getElementById('sceneData').innerHTML="<u>"+top.getText('actuallyConfigured',0)+":</u><br>"+dayWeekMonth+"<br><br>"+events+"<br><br>"+nextRun+"<br><br>"+lastRun;
+});
+
+var tempSceneName;
+function onOff(state){
+  tempSceneName="eg.plugins.SchedulGhost.GetSchedule(\"scene"+top.sceneChoosen+"\")[0]";
+  state=onOffMapping1[state];
+  for (var j=0; j<onOffMapping.length; j++){
+    tempString='<button class="p1 w2 ';
+    if (state==onOffMapping[j]){
+      tempString+='green" ';
+    }
+    else{
+      tempString+='default" ';
+    }
+    tempString+='onClick="omega.TriggerAction({lable:\''+top.getText('scene',0)+':'+sceneTitle+'\',command:\'sceneOnOff\',targetState:\''+onOffMapping[j]+'\',data:'+top.sceneChoosen+',possibleStates:[1,0],statesDict:onOffMapping1,variable:tempSceneName,preSelectIndex:'+j+'});"';
+    document.getElementById("0"+(j+1)+"B").innerHTML=tempString+'>'+top.getText('statesCfg.json',onOffMapping[j])+'</button>';
+  }
+}
+
+function activeStop(state){
+  for (var j=0; j<activeStopMapping.length; j++){
+    tempString='<button class="p1 w2 ';
+    if (state==activeStopMapping[j]){
+      tempString+='green" ';
+    }
+    else{
+      tempString+='default" ';
+    }
+    tempString+='onClick="omega.TriggerAction({lable:\''+top.getText('scene',0)+':'+sceneTitle+'\',command:\'sceneOnOff\',targetState:\''+activeStopMapping[j]+'\',data:'+top.sceneChoosen+',possibleStates:[\'[activate]\'],variable:\'eg.plugins.OMEGA.plugin.sceneNames[eg.plugins.OMEGA.plugin.sceneNamesIds['+top.sceneChoosen+']][2]\'});"';
+    document.getElementById("1"+(j+1)+"B").innerHTML=tempString+'>'+top.getText('statesCfg.json',activeStopMapping[j])+'</button>';
+  }
+}
+
+omega.OnLoad(function(){
+  omega.CreateModeMenu({printNoTable:true,maxCols:4,startVisibleMinWidth:650,showStates:false,record:true});
+  document.getElementById("omegaModeB").innerHTML =top.getText('mode',0)+':';
+  document.getElementById('00B').innerHTML='<button class="p2 w2 defaultNH">'+top.getText('status',0)+':</button>';
+});
+
+</script>
+</head>
+<body>
+  <table class="menuTable" cellpadding="0" cellspacing="0">
+    <tr class="shrinkH">
+      <td class="noBorder p1" valign="top"></td>
+    </tr>
+    <tr>
+      <td>
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr align="left" valign="top">
+            <td>
+              <table border="0" cellpadding="0" cellspacing="3">
+                <tr>
+                  <td><button id="omegaModeB" class="p2 w2 defaultNH"></button></td>
+                  <td class="hideThis"><div id="00B"></div></td>
+                </tr>
+                <tr>
+                  <td><button id="omegaMode0B" class="p1 w2"></button></td>
+                  <td class="hideThis"><div id="01B"></div></td>
+                </tr>
+                <tr>
+                  <td><button id="omegaMode1B" class="p1 w2"></button></td>
+                  <td class="hideThis"><div id="02B"></div></td>
+                </tr>
+                <tr>
+                  <td><button id="omegaMode2B" class="p1 w2"></button></td>
+                  <td class="hideThis"><div id="11B"></div></td>
+                </tr>
+                <tr>
+                  <td><button id="omegaMode3B" class="p1 w2"></button></td>
+                  <td class="hideThis"><div id="12B"></div></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr class="HSpace"></tr>
+          <tr valign="top">
+            <td class="hideThis"><div id="sceneData"></div></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

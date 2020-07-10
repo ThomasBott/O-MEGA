@@ -1,0 +1,266 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<title>Default</title>
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+var choosenLanguage=top.userSettings["language"];
+var configData={};
+configData["config"]=top.userSettings["advancedConfig"];
+configData["useFullscreen"]=top.userSettings["useFullscreen"];
+configData["startFullscreen"]=top.userSettings["startFullscreen"];
+configData["lockDashboard"]=top.userSettings["lockDashboard"];
+configData["backgroundPath"]=top.userSettings["backgroundPath"];
+configData["defaultView"]=top.userSettings["defaultView"];
+var availableLanguages=[0,1];
+var onOffMapping=[true,false];
+var onOffMapping1={true:"[on]",false:"[off]"};
+
+function languagesPrint(){
+  var contentStr='<table class="stdtable" border="0" cellpadding="0" cellspacing="0"><tr><td><button class="p2 w2 defaultNH">'+top.getText("language",0)+':</button></td></tr>';
+  for (var i=0; i<availableLanguages.length; i++){
+    contentStr+='<tr><td><button class="p1 w2';
+    if (choosenLanguage==availableLanguages[i]){
+      contentStr+=' green';
+    }
+    else{
+      contentStr+=' default';
+    }
+    contentStr+='" onClick="setLanguage('+availableLanguages[i]+')">'+top.getText('languages',availableLanguages[i])+'</button></td></tr>';
+  }
+  contentStr+='</table>';
+  document.getElementById("languageContent").innerHTML=contentStr;
+}
+
+
+function configPrint(id){
+  var contentStr='<table class="stdtable" border="0" cellpadding="0" cellspacing="0"><tr><td><button class="p2 w2 defaultNH">'+top.getText("guiSettings",id)+':</button></td></tr>';
+  for (var i=0; i<onOffMapping.length; i++){
+    contentStr+='<tr><td><button class="p1 w2';
+    if (configData[id]==onOffMapping[i]){
+      contentStr+=' green';
+    }
+    else{
+      contentStr+=' default';
+    }
+    contentStr+='" onClick="setConfig(\''+id+'\','+onOffMapping[i]+')">'+top.getText('statesCfg.json',onOffMapping1[onOffMapping[i]])+'</button></td></tr>';
+  }
+  contentStr+='</table>';
+  document.getElementById(id+"Content").innerHTML=contentStr;
+}
+
+function effectTimePrint(){
+  var contentStr='<table class="stdtable" border="0" cellpadding="0" cellspacing="0"><tr><td colspan="2"><button class="p2 w4 defaultNH">'+top.getText("effectTime",0)+':</button></td></tr><tr>';
+  for (var i=1; i<=2; i++){
+    contentStr+='<td><button class="p2 w2 defaultNH">'+top.getText('effectTime',i)+':</button></td>';
+  }
+  contentStr+='</tr><tr>';
+  for (var i=1; i<=2; i++){
+    contentStr+='<td><input type="number" min="0" id="effectTimeBox'+i+'" class="w2" /></td>';
+  }
+  contentStr+='</tr></table>';
+  document.getElementById("effectTimeContent").innerHTML=contentStr;
+}
+
+function dashReturnTimeoutPrint(){
+  var contentStr='<table class="stdtable" border="0" cellpadding="0" cellspacing="0"><tr><td><button class="p2 w2 defaultNH">'+top.getText('guiSettings','dashReturnTimeout')+':</button></td></tr><tr><td><input type="number" min="0" id="dashReturnTimeoutBox" class="w2" /></td></tr></table>';
+  document.getElementById("dashReturnTimeoutContent").innerHTML=contentStr;
+}
+
+function backgroundPathPrint(){
+  var contentStr='<table class="stdtable" border="0" cellpadding="0" cellspacing="0"><tr><td colspan="2"><button class="p2 w3 defaultNH">'+top.getText("guiSettings","background")+':</button></td></tr><tr><td id="backgroundChooser"></td></tr></table>';
+  document.getElementById("backgroundPathContent").innerHTML=contentStr;
+  backgroundPathValuePrint();
+}
+
+function backgroundPathValuePrint(newVal){
+  configData["backgroundPath"]=newVal||configData["backgroundPath"];
+  var command={"method":"getFilesForDropdown","args":["background"],"callback":function(data){
+      data=[""].concat(JSON.parse(data));
+      //data.splice(0,0,"");
+      var contentStr='<select class="default p1 w3" id="backgroundPath">';
+      for (var i=0; i<data.length; i++){
+        if (data[i]==configData["backgroundPath"]){
+          contentStr+='<option value="'+data[i]+'" selected="selected">'+data[i]+'</option>';
+        }
+        else{
+          contentStr+='<option value="'+data[i]+'">'+data[i]+'</option>';
+        }
+      }
+      document.getElementById("backgroundChooser").innerHTML=contentStr+'</select>';
+  }};
+  omega.Request(command);
+}
+
+function defaultViewPrint(){
+  var contentStr='<table class="stdtable" border="0" cellpadding="0" cellspacing="0"><tr><td colspan="2"><button class="p2 w3 defaultNH">'+top.getText("guiSettings","defaultView")+':</button></td></tr><tr><td id="viewChooser"></td></tr></table>';
+  document.getElementById("defaultViewContent").innerHTML=contentStr;
+  defaultViewValuePrint();
+}
+
+function defaultViewValuePrint(newVal){
+  configData["defaultView"]=newVal||configData["defaultView"];
+  var content='<select class="default p1 w3" id="defaultView">';
+  for (var i=0; i<top.user["views"].length; i++){
+    var tempVal=top.user["views"][i];
+    var tempText=top.getText('views.json',tempVal);
+    if (configData["defaultView"]==tempVal){
+      content+='<option value="'+tempVal+'" selected="selected">'+tempText+'</option>';
+    }
+    else{
+      content+='<option value="'+tempVal+'">'+tempText+'</option>';
+    }
+  }
+  document.getElementById('viewChooser').innerHTML=content+'</select>';
+}
+
+function setLanguage(newLanguage){
+  choosenLanguage=newLanguage;
+  languagesPrint();
+}
+
+function setConfig(vari,newValue){
+  configData[vari]=newValue;
+  configPrint(vari);
+}
+
+function saveF(){
+  top.userSettings1["language"]=choosenLanguage;
+  //top.userSettingsDevice["language"]=choosenLanguage;
+  
+  top.userSettings1["advancedConfig"]="[deviceSetting]";
+  top.userSettingsDevice["advancedConfig"]=configData["config"];
+  
+  top.userSettings1["useFullscreen"]="[deviceSetting]";
+  top.userSettingsDevice["useFullscreen"]=configData["useFullscreen"];
+  
+  top.userSettings1["startFullscreen"]="[deviceSetting]";
+  top.userSettingsDevice["startFullscreen"]=configData["startFullscreen"];
+  
+  top.userSettings1["lockDashboard"]=configData["lockDashboard"];
+  
+  top.userSettings1["backgroundPath"]="[deviceSetting]";
+  top.userSettingsDevice["backgroundPath"]=document.getElementById("backgroundPath").value;
+  
+  top.userSettings1["effectTimePage"]=parseInt(document.getElementById("effectTimeBox1").value);
+  //top.userSettingsDevice["effectTimePage"]=parseInt(document.getElementById("effectTimeBox1").value);
+  
+  top.userSettings1["effectTimeSlide"]=parseInt(document.getElementById("effectTimeBox2").value);
+  //top.userSettingsDevice["effectTimeSlide"]=parseInt(document.getElementById("effectTimeBox2").value);
+  
+  top.userSettings1["defaultView"]="[deviceSetting]";
+  top.userSettingsDevice["defaultView"]=document.getElementById("defaultView").value;
+  
+  top.userSettings1["dashReturnTimeout"]="[deviceSetting]";
+  top.userSettingsDevice["dashReturnTimeout"]=parseInt(document.getElementById("dashReturnTimeoutBox").value);
+  
+  top.saveUserSettings(function(){top.location.reload();});
+}
+
+function clearAll(){
+  choosenLanguage=0;
+  backgroundPathValuePrint("background.jpg");
+  defaultViewValuePrint("-");
+  document.getElementById("effectTimeBox1").value=400;
+  document.getElementById("effectTimeBox2").value=200;
+  document.getElementById("dashReturnTimeoutBox").value=0;
+  languagesPrint();
+  setConfig("config",false);
+  setConfig("useFullscreen",false);
+  setConfig("startFullscreen",false);
+  setConfig("lockDashboard",false);
+}
+
+omega.OnUpdate(function(ext){
+  if (ext=="reload"){
+    choosenLanguage=top.userSettings["language"];
+    configData["config"]=top.userSettings["advancedConfig"];
+    configData["useFullscreen"]=top.userSettings["useFullscreen"];
+    configData["startFullscreen"]=top.userSettings["startFullscreen"];
+    configData["lockDashboard"]=top.userSettings["lockDashboard"];
+    backgroundPathValuePrint(top.userSettings["backgroundPath"]);
+    defaultViewValuePrint(top.userSettings["defaultView"]);
+    document.getElementById("effectTimeBox1").value=top.userSettings["effectTimePage"];
+    document.getElementById("effectTimeBox2").value=top.userSettings["effectTimeSlide"];
+    document.getElementById("dashReturnTimeoutBox").value=top.userSettings["dashReturnTimeout"];
+    languagesPrint();
+    configPrint("config");
+    configPrint("useFullscreen");
+    configPrint("startFullscreen");
+    configPrint("lockDashboard");
+  }
+});
+
+omega.OnLoad(function(){
+  languagesPrint();
+  configPrint("config");
+  configPrint("useFullscreen");
+  configPrint("startFullscreen");
+  configPrint("lockDashboard");
+  effectTimePrint();
+  dashReturnTimeoutPrint();
+  backgroundPathPrint();
+  defaultViewPrint();
+  document.getElementById("effectTimeBox1").value=top.userSettings["effectTimePage"];
+  document.getElementById("effectTimeBox2").value=top.userSettings["effectTimeSlide"];
+  document.getElementById("dashReturnTimeoutBox").value=top.userSettings["dashReturnTimeout"];
+  document.getElementById("okB").innerHTML = '<button class="p1 w2 default Hgreen" onClick="saveF();">'+top.getText('saveChanges',0)+'</button>';
+  document.getElementById("clearB").innerHTML = '<button class="p1 w2 default Hred" onClick="clearAll();">'+top.getText('clearSettings',0)+'</button>';
+});
+
+</script>
+
+</head>
+
+<body>
+<center>
+<table style="height:100%; width:100%;" border="0" cellpadding="0" cellspacing="0">
+    <tr valign="top" class="title">
+      <td align="right">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td><div id="clearB"></div></td>
+            <td class="border3"></td>
+            <td><div id="okB"></div></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr align="center" valign="top">
+      <td align="center" colspan="2">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td colspan="2" id="languageContent"></td>
+            <td colspan="2" id="configContent"></td>
+            <td colspan="2" id="useFullscreenContent"></td>
+          </tr>
+          <tr class="HSpace big"></tr>
+          <tr>
+            <td colspan="3" id="backgroundPathContent" ></td>
+            <td colspan="3" id="defaultViewContent" ></td>
+          </tr>
+          <tr class="HSpace big"></tr>
+          <tr>
+            <td colspan="4" id="effectTimeContent" ></td>
+            <td valign="top" colspan="2"></td>
+          </tr>
+          <tr class="HSpace big"></tr>
+          <tr>
+            <td colspan="2" id="startFullscreenContent"></td>
+            <td colspan="2" id="lockDashboardContent"></td>
+            <td valign="top" colspan="2" id="dashReturnTimeoutContent"></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+</table>
+</center>
+</body>
+</html>

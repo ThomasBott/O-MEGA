@@ -1,0 +1,806 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<title>MouseKeyboard</title>
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/tinybox.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+var moveStarted=false;
+var factor=omega.GetUserSetting({name:"mouseFactor"})||1.2;
+var factorTouch=factor;
+var speed=omega.GetUserSetting({name:"mouseSpeed"})||50;
+var speedTouch=speed;
+var scrollSpeed=omega.GetUserSetting({name:"mouseScrollSpeed"})||100;
+var scrollSpeedTouch=scrollSpeed;
+var reverseScrollTouch=false;
+var clickWaitTouch=150;
+var rightClickWaitTouch=750;
+if (top.touchDevice){
+  factorTouch=omega.GetUserSetting({name:"mouseTouchFactor"})||5;
+  speedTouch=omega.GetUserSetting({name:"mouseTouchSpeed"})||35;
+  scrollSpeedTouch=omega.GetUserSetting({name:"mouseTouchScrollSpeed"})||20;
+  clickWaitTouch=omega.GetUserSetting({name:"mouseTouchClickWait"})||150;
+  rightClickWaitTouch=omega.GetUserSetting({name:"mouseTouchRightClickWait"})||750;
+  reverseScrollTouch=omega.GetUserSetting({name:"mouseTouchReverseScroll"})||false;
+}
+var posx;
+var posy;
+var posxold;
+var posyold;
+var posx2;
+var posy2;
+var posx2old;
+var posy2old;
+var pointerLockElem;
+var delay=false;
+var changex=0;
+var changey=0;
+var clickType=0;
+var clickCountdown=false;
+var rightClickCounter;
+var clickCounter;
+var buttonsDown={1:false,2:false,3:false,4:false,5:false};
+var fingers=0;
+var lastFingers=0;
+var keysOld;
+var kexBoardInterv;
+var working=false;
+var KeyArray = [];
+var textfocus=false;
+var arrowKeys=false;
+
+
+function handleTouchStart(e){
+  if(e.target.className.indexOf("noClick")==-1){
+    //alert(e.target.id);
+    e.stopPropagation();
+    e.preventDefault();
+    if (moveStarted==false && fingers==0){
+      moveStarted=true;
+      posxold=e.originalEvent.touches[0].pageX;
+      posyold=e.originalEvent.touches[0].pageY;
+      clearTimeout(clickCounter);
+      if (clickCountdown==false){
+        clickCountdown=true;
+        clickCounter=setTimeout("clickAction();",150);
+      }
+      clickType++;
+      if (clickType==3){
+        MouseDownHandler(e);
+        clickCounter=setTimeout("clickAction();",clickWaitTouch);
+      }
+    }
+    //else if(moveStarted){
+    //  moveStarted=false;
+    //}
+    if (arrowKeysVisible){
+      showArrowKeys(false);
+    }
+  }
+  if (textfocus){
+    document.getElementById("textBox").blur();
+  }
+  else if(arrowKeys){
+    showArrowKeys(false);
+  } 
+  fingers++;
+  if (fingers==2){
+    posx2old=e.originalEvent.touches[1].pageX;
+    posy2old=e.originalEvent.touches[1].pageY;
+  }
+  lastFingers=fingers;
+}
+
+function resetFingers(){
+  fingers=0;
+  moveStarted=false;
+}
+
+function handleEnd(e){
+  fingers--;
+  if (fingers<0){
+    fingers=0;
+  }
+  moveStarted=false;
+  if (e.target.className.indexOf("noClick")==-1 && fingers==0){
+    //e.preventDefault();
+    //alert(e.target.id);
+    //moveStarted=false;
+    if (clickCountdown){
+      clearTimeout(clickCounter);
+      clickType++;
+      if (clickType>3){
+        clickAction();
+      }
+      else{
+        clickCounter=setTimeout("clickAction();",clickWaitTouch);
+      }
+    }
+    else if (buttonsDown[1]){
+      MouseUpHandler(e);
+    }
+    clearTimeout(rightClickCounter);
+  }
+}
+
+function clickAction(){
+  clickCountdown=false;
+  if (clickType==1){
+    rightClickCounter=setTimeout("MouseClick(2);",rightClickWaitTouch);
+  }
+  else if (clickType==2){
+    if (lastFingers==1){
+      MouseClick(1);
+    }
+    else if (lastFingers==2){
+      MouseClick(2);
+    }
+  }
+  else if (clickType==4){
+    MouseUpHandler();
+    MouseClick(1);
+  }
+  clickType=0;
+}
+
+//setInterval("delay=false",25);
+
+function doMove(x,y,multi){
+  delay=true;
+  setTimeout("delay=false",25);
+  if (x<0){
+    x=Math.floor(x/100*multi);
+  }
+  else{
+    x=Math.ceil(x/100*multi);
+  }
+  if (y<0){
+    y=Math.floor(y/100*multi);
+  }
+  else{
+    y=Math.ceil(y/100*multi);
+  }
+  omega.Request({'method':'mouseMove','args':[x,y]});
+}
+
+var dirOldX=0;
+var dirOldY=0;
+function doScroll(x,y,multi,reverse){
+  delay=true;
+  setTimeout("delay=false",100);
+  if (x<0){
+    x=Math.floor(x/100*multi);
+    if (dirOldX==1 && x==-1){
+      x=0;
+    }
+    dirOldX=-1;
+  }
+  else{
+    x=Math.ceil(x/100*multi);
+    if (dirOldX==-1 && x==1){
+      x=0;
+    }
+    dirOldX=1;
+  }
+  if (y<0){
+    y=Math.floor(y/100*multi);
+    if (dirOldY==1 && y==-1){
+      y=0;
+    }
+    dirOldY=-1;
+  }
+  else{
+    y=Math.ceil(y/100*multi);
+    if (dirOldY==-1 && y==1){
+      y=0;
+    }
+    dirOldY=1;
+  }
+  if (!reverse){
+    y=y*-1;
+  }
+  omega.Request({'method':'mouseScroll','args':[x,y]});
+}
+
+function handleMove(e){
+    if (e.type=="touchmove"){
+      e.stopPropagation();
+      e.preventDefault();
+      //if (typeof rightClickCounter!="undefined"){
+        clearTimeout(rightClickCounter);
+      //}
+      if (moveStarted==true && delay==false){
+        posx= e.originalEvent.touches[0].pageX;
+        posy= e.originalEvent.touches[0].pageY;
+        if (fingers==1){
+          doMove(posx-posxold,posy-posyold,speedTouch*factorTouch);
+        }
+        else if(fingers==2){
+          posx2= e.originalEvent.touches[1].pageX;
+          posy2= e.originalEvent.touches[1].pageY;
+          var deltax1=posx-posxold;
+          var deltax2=posx2-posx2old;
+          var deltay1=posy-posyold;
+          var deltay2=posy2-posy2old;
+          if (deltax1>=0 && deltax2>=0 || deltax1<=0 && deltax2<=0 || deltay1>=0 && deltay2>=0 || deltay1<=0 && deltay2<=0){
+            doScroll(parseInt((deltax1+deltax2)/2),parseInt((deltay1+deltay2)/2),scrollSpeedTouch,reverseScrollTouch);
+            posx2old=posx2;
+            posy2old=posy2;
+          }
+          else if (zoomEnabled && (posx!=posx2 && posy!=posy2)){
+            var finger1=4;
+            if (posx<posx2 && posy>posy2){
+              finger1=1;
+            }
+            else if (posx>posx2 && posy>posy2){
+              finger1=2;
+            }
+            else if(posx<posx2 && posy<posy2){
+              finger1=3;
+            }
+            if (finger1==1 && deltax1<0 && deltay1>0 && deltax2>0 && deltay2<0 || finger1==2 && deltax1>0 && deltay1>0 && deltax2<0 && deltay2<0 || finger1==3 && deltax1<0 && deltay1<0 && deltax2>0 && deltay2>0 || finger1==4 && deltax1>0 && deltay1<0 && deltax2<0 && deltay2>0){
+              doZoom(1);
+            }
+            else if (finger1==1 && deltax1>0 && deltay1<0 && deltax2<0 && deltay2>0 || finger1==2 && deltax1<0 && deltay1<0 && deltax2>0 && deltay2>0 || finger1==3 && deltax1>0 && deltay1>0 && deltax2<0 && deltay2<0 || finger1==4 && deltax1<0 && deltay1>0 && deltax2>0 && deltay2<0){
+              doZoom(-1);
+            }
+            posx2old=posx2;
+            posy2old=posy2;
+          }
+        }
+        posxold=posx;
+        posyold=posy;
+      }
+    }
+    else{
+      changex += e.movementX     ||
+                    e.mozMovementX    ||
+                    e.webkitMovementX ||
+                    0;
+      changey += e.movementY       ||
+                    e.mozMovementY    ||
+                    e.webkitMovementY ||
+                    0;
+      if (delay==false){
+        doMove(changex,changey,speed*factor);
+        changex=0;
+        changey=0;
+      }
+    }
+}
+
+var zoomEnabled=true;
+function doZoom(how){
+  zoomEnabled=false;
+  if (how>0){
+    KeyArray.push(["{Win+Add}","True","2"]);
+  }
+  else{
+    KeyArray.push(["{Win+Subtract}","True","2"]);
+  }
+  TriggerKey();
+  setTimeout("zoomEnabled=true",250);
+}
+
+var pointerLockActive=false;
+function pointerLockChange(){
+  if (document.pointerLockElement === pointerLockElem || document.mozPointerLockElement === pointerLockElem ||
+      document.webkitPointerLockElement === pointerLockElem) {
+    console.log("Pointer Lock was successful.");
+    document.getElementById("textBox").focus();
+    window.onmousemove = handleMove;
+    document.onmousedown = MouseDownHandler;
+    document.onmouseup = MouseUpHandler;
+    pointerLockActive=true;
+  } else {
+    console.log("Pointer Lock was lost.");
+    window.onmousemove = false;
+    document.onmousedown = false;
+    document.onmouseup = false
+    pointerLockActive = false;
+  }
+}
+
+document.addEventListener('pointerlockchange', pointerLockChange, false);
+document.addEventListener('mozpointerlockchange', pointerLockChange, false);
+document.addEventListener('webkitpointerlockchange', pointerLockChange, false);
+
+function pointerLockError(){
+  console.log("Error while locking pointer.");
+}
+document.addEventListener('pointerlockerror', pointerLockError, false);
+document.addEventListener('mozpointerlockerror', pointerLockError, false);
+document.addEventListener('webkitpointerlockerror', pointerLockError, false);
+
+function lockPointer(e){
+  if(!pointerLockActive && e.target.className.indexOf("noClick")==-1){
+    pointerLockElem = document.getElementById("contentTable");
+    pointerLockElem.requestPointerLock = pointerLockElem.requestPointerLock    ||
+                                pointerLockElem.mozRequestPointerLock ||
+                                pointerLockElem.webkitRequestPointerLock;
+    pointerLockElem.requestPointerLock();
+  }
+  else if(arrowKeys){
+    showArrowKeys(false);
+  } 
+}
+
+
+function TriggerKey1(key){
+  var special="";
+  //if (hotKeyModeEnabled){
+    for (var i=0; i<specialKeys.length; i++){
+      if (specialKeyState[specialKeys[i]]){
+        special+=specialKeys[i]+"+";
+      }
+    }
+    initSpecialKeys();
+  //}
+  key=special+key
+  KeyArray.push(["{"+key+"}","True","2"]);
+  TriggerKey();
+}
+
+function TriggerKey(){
+  if (working==false && KeyArray.length>0){
+    working=true;
+    omega.Request({'method':'sendKeys','args':[KeyArray[0][0],KeyArray[0][1],KeyArray[0][2]],'callback':function(data){
+      console.log(data);
+      omega.TriggerEvent({command:"keyboardType",data:[encodeURIComponent(KeyArray[0][0]),KeyArray[0][1],KeyArray[0][2]],shadow:1});
+      KeyArray.shift();
+      working=false;
+      TriggerKey();
+    }});
+  }
+}
+
+function keyboard0(keys){
+  if (keys!=keysOld && inputActive){
+    if(hotKeyModeEnabled){
+      if (keys==""){
+        TriggerKey1("Backspace");
+      }
+      else{
+        keys=keys.trim();
+        if (keys==""){
+          TriggerKey1("Space");
+        }
+        else{
+          for (var i=0; i<keys.length; i++){
+            var temp=keys.charAt(i);
+            if (temp=="+"){
+              temp="Add";
+            }
+            else if (temp=="-"){
+              temp="Subtract";
+            }
+            TriggerKey1(temp);
+          }
+        }
+      }
+      fill();
+    }
+    else{
+      var y=0;
+      while (keys.charAt(y)==keysOld.charAt(y) && y<keys.length){
+        y++;
+      }
+      if (keys.length==0){
+        var diff=keysOld.length-y;
+        for (var i=0; i<diff; i++){
+          KeyArray.push(["{backspace}","True","2"]);
+        }
+        keys=" "+keys;
+        document.getElementById("textBox").value=keys;
+      }
+      else{
+        var diff=keysOld.length-y;
+        for (var i=0; i<diff; i++){
+          KeyArray.push(["{backspace}","True","2"]);
+        }
+        var temp =keys.substring(y,keys.length);
+        if (temp!=""){
+          KeyArray.push([keys.substring(y,keys.length),"False","2"]);
+        }
+      }
+      keysOld=keys;
+      TriggerKey();
+    }
+  }
+  else if (!inputActive){
+    fill();
+  }
+}
+
+var pressedButton=1;
+function MouseDownHandler(e){
+  e = e || window.event;
+  var button=e.buttons||1;
+  pressedButton=button;
+  if(e.target.className.indexOf("noClick")==-1){
+    omega.Request({'method':'mouseButton','args':[button,'[down]'],'callback':triggerButton(button,'[down]')});
+    buttonsDown[button]=true;
+    if (arrowKeysVisible){
+      showArrowKeys(false);
+    }
+  }
+}
+
+function MouseUpHandler(e){
+  e = e || window.event;
+  var button=e.buttons||pressedButton;
+  if(buttonsDown[button]){
+    omega.Request({'method':'mouseButton','args':[button,'[up]'],'callback':triggerButton(button,'[up]')});
+    buttonsDown[button]=false;
+  }
+  if (pointerLockActive){
+    document.getElementById("textBox").focus();
+  }
+}
+
+function triggerButton(button,how){
+  return function(data){omega.TriggerEvent({command:'mouseButton',targetState:how,targetValue:[button],data:JSON.parse(data),shadow:1});}
+}
+
+function MouseRightClick1(e){
+    e = e || window.event;
+    e.stopPropagation();
+    e.preventDefault();
+    //if (pointerLockActive){
+    //    MouseClick(2);
+    //}
+}
+
+function MouseClick(button){
+    omega.Request({'method':'mouseButton','args':[button,'[click]'],'callback':triggerButton(button,'[click]')});
+}
+
+var noAutomaticRelease={};
+function KeyDownHandler(e){
+    switch(e.which){
+        case  9: stopStuff(e); TriggerKey1("Tabulator"); break;
+        case  36: stopStuff(e); TriggerKey1("Home"); break;
+        case  13: stopStuff(e); TriggerKey1("Return"); fill(); break;
+        case  16: stopStuff(e); specialKey("Shift",true); noAutomaticRelease["Shift"]=true; break;
+        case  17: stopStuff(e); specialKey("Ctrl",true); noAutomaticRelease["Ctrl"]=true; break;
+        case  18: stopStuff(e); specialKey("Alt",true); noAutomaticRelease["Alt"]=true; break;
+        case  19: stopStuff(e); TriggerKey1("Pause"); break;
+        case  27: stopStuff(e); TriggerKey1("Escape"); break;
+        case  33: stopStuff(e); TriggerKey1("PageUp"); break;
+        case  34: stopStuff(e); TriggerKey1("PageDown"); break;
+        case  35: stopStuff(e); TriggerKey1("End"); break;
+        case  37: stopStuff(e); TriggerKey1("Left"); break;
+        case  38: stopStuff(e); TriggerKey1("Up"); break;
+        case  39: stopStuff(e); TriggerKey1("Right"); break;
+        case  40: stopStuff(e); TriggerKey1("Down"); break;
+        case  45: stopStuff(e); TriggerKey1("Insert"); break;
+        case  46: stopStuff(e); TriggerKey1("Delete"); break;
+        case  91: stopStuff(e); TriggerKey1("LWin"); break;
+        case  92: stopStuff(e); TriggerKey1("RWin"); break;
+        case  93: stopStuff(e); TriggerKey1("Apps"); break;
+        case  107: stopStuff(e); TriggerKey1("Add"); break;
+        case  109: stopStuff(e); TriggerKey1("Subtract"); break;
+        case  112: stopStuff(e); TriggerKey1("F1"); break;
+        case  113: stopStuff(e); TriggerKey1("F2"); break;
+        case  114: stopStuff(e); TriggerKey1("F3"); break;
+        case  115: stopStuff(e); TriggerKey1("F4"); break;
+        case  116: stopStuff(e); TriggerKey1("F5"); break;
+        case  117: stopStuff(e); TriggerKey1("F6"); break;
+        case  118: stopStuff(e); TriggerKey1("F7"); break;
+        case  119: stopStuff(e); TriggerKey1("F8"); break;
+        case  120: stopStuff(e); TriggerKey1("F9"); break;
+        case  121: stopStuff(e); TriggerKey1("F10"); break;
+        case  122: stopStuff(e); TriggerKey1("F11"); break;
+        case  123: stopStuff(e); TriggerKey1("F12"); break;
+        case  171: stopStuff(e); TriggerKey1("Add"); break;
+        case  173: stopStuff(e); TriggerKey1("Subtract"); break;
+        default: ctrlWorkaround(e,e.key); break;
+        //default: alert(e.which); break;
+    }
+}
+
+function stopStuff(e){
+  e.stopPropagation();
+  e.preventDefault();
+}
+
+var inputActive=true;
+function ctrlWorkaround(e,key){
+  if (key!="Unidentified" && (specialKeyState["Ctrl"] || hotKeyModeEnabled)){
+    stopStuff(e);
+    inputActive=false;
+    TriggerKey1(key);
+    //alert(key);
+    fill();
+    inputActive=true;
+  }
+}
+
+function KeyUpHandler(e){
+    switch(e.which){
+        case  16: stopStuff(e); specialKey("Shift",false); noAutomaticRelease["Shift"]=false; break;
+        case  17: stopStuff(e); specialKey("Ctrl",false); noAutomaticRelease["Ctrl"]=false; break;
+        case  18: stopStuff(e); specialKey("Alt",false); noAutomaticRelease["Alt"]=false; break;
+        default: break;
+        //default: alert(e.which); break;
+    }
+}
+
+function MouseWheelHandler(event){
+    if(event.detail<0){
+      doScroll(0,-1,scrollSpeed,false)
+    }
+    else{
+      doScroll(0,1,scrollSpeed,false)
+    }
+    return false;
+}
+
+omega.OnUpdate(function(ext){
+  if (ext=="load" || ext=="reload"){
+    if (top.touchDevice==false){
+      document.getElementById("textBox").focus();
+    }
+    else{
+      resetFingers();
+      //omega.SetFullscreen({active:true});
+    }
+  }
+});
+
+omega.OnLoad(function(){
+    hotKeyMode(false);
+    document.onkeydown = KeyDownHandler;
+    document.onkeyup = KeyUpHandler;
+    //document.onmousedown = MouseDownHandler;
+    document.oncontextmenu = MouseRightClick1;
+    //document.onmouseup = MouseUpHandler;
+    document.addEventListener('DOMMouseScroll', MouseWheelHandler, false);
+    //window.onmousemove = handleMove;
+    if (top.touchDevice){
+      var tempElement=document.getElementById("contentTable");
+      $(tempElement).on("touchstart", handleTouchStart);
+      $(tempElement).on("touchmove", handleMove);
+      $(tempElement).on("touchend", handleEnd);
+      $(tempElement).on("touchleave", handleEnd);
+    }
+    //$(document.getElementById("contentTable")).on("mouseout", handleEnd);
+    document.getElementById("contentTable").addEventListener('click',lockPointer,false);
+    document.getElementById("ArrowKeysB").innerHTML='<button class="p1 w2 default noClick" onClick="showArrowKeys(true);">'+top.getText('keyboard','ArrowKeys')+'</button>';
+    initiateHotKeyModeButtons();
+    if (!top.touchDevice){
+      $(document.getElementById('HotKeyMode')).niceScroll({horizrailenabled:false,gesturezoom:false,cursorcolor:"red",cursorborder:"0px",spacebarenabled:false,enablekeyboard:false,smoothscroll:true,enablemouselockapi:false,scrollspeed:80,preservenativescrolling:true,enablemousewheel:true,zindex:99});
+    }
+    showArrowKeys(arrowKeys);
+    omega.ApplyHandlerRepeat({targetId:"arrowKeyUp",func:function(){TriggerKey1('Up');},interval:0.2});
+    omega.ApplyHandlerRepeat({targetId:"arrowKeyDown",func:function(){TriggerKey1('Down');},interval:0.2});
+    omega.ApplyHandlerRepeat({targetId:"arrowKeyLeft",func:function(){TriggerKey1('Left');},interval:0.2});
+    omega.ApplyHandlerRepeat({targetId:"arrowKeyRight",func:function(){TriggerKey1('Right');},interval:0.2});
+    omega.ApplyHandlerRepeat({targetId:"arrowKeyPageUp",func:function(){TriggerKey1('PageUp');}});
+    omega.ApplyHandlerRepeat({targetId:"arrowKeyPageDown",func:function(){TriggerKey1('PageDown');}});
+    omega.ApplyHandlerRepeat({targetId:"arrowKeyBackspace",func:function(){TriggerKey1('Backspace');},interval:0.2});
+});
+
+function fill(){
+  textfocus=true;
+  document.getElementById("textBox").value = " ";
+  keysOld=" ";
+  clearInterval(kexBoardInterv);
+  kexBoardInterv=setInterval("keyboard0(document.getElementById('textBox').value);",100);
+}
+
+function unFill(){
+  textfocus=false;
+  clearInterval(kexBoardInterv);
+  document.getElementById("textBox").value = "";
+  keysOld="";
+}
+
+var arrowKeysVisible=false;
+function showArrowKeys(show){
+  //resetFingers();
+  if (show){
+    document.getElementById("arrowKeys").style.transition="right "+omega.GetUserSetting({name:"effectTimeSlide",global:true})+"ms";
+    document.getElementById("arrowKeys").style.right="0px";
+    arrowKeysVisible=true;
+  }
+  else{
+    document.getElementById("arrowKeys").style.transition="right 0ms";
+    document.getElementById("arrowKeys").style.right="-246px";
+    arrowKeysVisible=false;
+  }
+}
+
+var hotKeyModeEnabled=false;
+function hotKeyMode(show){
+  //resetFingers();
+  if (show){
+    document.getElementById("HotKeyMode").style.transition="left "+omega.GetUserSetting({name:"effectTimeSlide",global:true})+"ms";
+    document.getElementById("HotKeyMode").style.left="0px";
+    document.getElementById('HotKeyModeB').innerHTML='<button class="p1 w2 green noClick" onClick="hotKeyMode(false);">'+top.getText('keyboard','HotKeyMode')+'</button>';
+    hotKeyModeEnabled=true;
+    $(document.getElementById('HotKeyMode')).getNiceScroll().show();
+    setTimeout("$(document.getElementById('HotKeyMode')).getNiceScroll().resize();",omega.GetUserSetting({name:"effectTimeSlide",global:true}));
+  }
+  else{
+    document.getElementById("HotKeyMode").style.transition="left "+omega.GetUserSetting({name:"effectTimeSlide",global:true})+"ms";
+    document.getElementById("HotKeyMode").style.left="-82px";
+    document.getElementById('HotKeyModeB').innerHTML='<button class="p1 w2 default noClick" onClick="hotKeyMode(true);">'+top.getText('keyboard','HotKeyMode')+'</button>';
+    hotKeyModeEnabled=false;
+    $(document.getElementById('HotKeyMode')).getNiceScroll().hide();
+  }
+  initSpecialKeys();
+}
+
+
+function initiateHotKeyModeButtons(){
+    var content='<table class="stdtable" cellpadding="0" cellspacing="0"><tr><td class="last" id="CtrlB"></td></tr><tr><td class="last" id="AltB"></td></tr><tr><td class="last" id="ShiftB"></td></tr><tr><td class="last" id="WinB"></td></tr><tr style="height:3px;"></tr><tr style="height:3px;" class="green"><td></td></tr>';
+    var hotKeyModeButtons=['Win','Tabulator','Home','End','Delete','Insert','Apps','Pause','Print','CapsLock','ScrollLock','NumLock','Escape'];
+    for (var i=0; i<hotKeyModeButtons.length; i++){
+        content+='<tr><td class="last"><button class="p1 w2 default noClick" onClick="TriggerKey1(\''+hotKeyModeButtons[i]+'\');">'+top.getText('keyboard',hotKeyModeButtons[i])+'</button></td></tr>';
+    }
+    for (var i=1; i<=12; i++){
+        content+='<tr><td class="last"><button class="p1 w2 default noClick" onClick="TriggerKey1(\'F'+i+'\');">F'+i+'</button></td></tr>';
+    }
+    content+='<tr><td class="last"><button id="options" class="p1 w2 default noClick" onClick="showOptionsBox();">'+top.getText('settings',0)+'</button></td></tr></table>';
+    document.getElementById('HotKeyMode').innerHTML=content;
+}
+
+var specialKeys=["Alt","Ctrl","Win","Shift"];
+for (var i=0; i<specialKeys.length; i++){
+  noAutomaticRelease[specialKeys[i]]=false;
+}
+
+function initSpecialKeys(){
+  for (var i=0; i<specialKeys.length; i++){
+    if (!noAutomaticRelease[specialKeys[i]]){
+      specialKey(specialKeys[i],false);
+    }
+  }
+}
+
+var specialKeyState={};
+function specialKey(key,active){
+  if (active){
+    //KeyArray.push(["{"+key+"}","True","1"]);
+    if (hotKeyModeEnabled){
+      document.getElementById(key+"B").innerHTML='<button class="p1 w2 green noClick" onClick="specialKey(\''+key+'\',false);">'+top.getText('keyboard',key)+'</button>';
+    }
+    specialKeyState[key]=true;
+  }
+  else{
+    //KeyArray.push(["{"+key+"}","True","0"]);
+    if (hotKeyModeEnabled){
+      document.getElementById(key+"B").innerHTML='<button class="p1 w2 default noClick" onClick="specialKey(\''+key+'\',true);">'+top.getText('keyboard',key)+'</button>';
+    }
+    specialKeyState[key]=false;
+  }
+  //TriggerKey();
+}
+
+//----------------------------------OptionsBoxStart----------------------------------------//
+function showOptionsBox(){
+    var content='<table border="0" cellpadding="0" cellspacing="3" align="center"><tr><td><button class="p1 w3 defaultNH transparent1NH left">'+top.getText('speed',0)+':</button></td><td><input type="number" min="0" max="1000" step="1" id="speedBox" class="w2" /></td></tr><tr><td><button class="p1 w3 defaultNH transparent1NH left">'+top.getText('keyboard','accelerationFactor')+':</button></td><td ><input type="number" min="0.01" max="10" step="0.01" id="factorBox" class="w2" /></td></tr><tr><td><button class="p1 w3 defaultNH transparent1NH left">'+top.getText('keyboard','scrollSpeed')+':</button></td><td ><input type="number" min="1" max="1000" step="1" id="scrollBox" class="w2" /></td></tr>';
+    var windowheight=155;
+    if (top.touchDevice){
+      content+='<tr><td><button class="p1 w3 defaultNH transparent1NH left">'+top.getText('speed',0)+':(Touch)</button></td><td><input type="number" min="0" max="1000" step="1" id="speedTouchBox" class="w2" /></td></tr><tr><td><button class="p1 w3 defaultNH transparent1NH left">'+top.getText('keyboard','accelerationFactor')+'(Touch):</button></td><td ><input type="number" min="0.01" max="10" step="0.01" id="factorTouchBox" class="w2" /></td></tr><tr><td><button class="p1 w3 defaultNH transparent1NH left">'+top.getText('keyboard','scrollSpeed')+':(Touch)</button></td><td ><input type="number" min="1" max="1000" step="1" id="scrollTouchBox" class="w2" /></td></tr><tr><td><button class="p1 w3 defaultNH transparent1NH left">'+top.getText('keyboard','reverseScrollDirection')+':</button></td><td ><button onClick="toggleReverseScrollBox();" id="reverseScrollBox" class="p1 w1 default"></button></td></tr><tr><td><button class="p1 w3 defaultNH transparent1NH left">'+top.getText('keyboard','clickWait')+'(ms):</button></td><td ><input type="number" min="1" max="1000" step="1" id="clickWaitTouchBox" class="w2" /></td></tr><tr><td><button class="p1 w3 defaultNH transparent1NH left">'+top.getText('keyboard','rightClickWait')+'(ms):</button></td><td ><input type="number" min="1" max="10000" step="1" id="rightClickWaitTouchBox" class="w2" /></td></tr>';
+      windowheight=380;
+    }
+    content+='<tr><td align="right"><button class="p1 w2 default" onClick="optionBoxOk();">'+top.getText('ok',0)+'</button></td><td><button class="p1 w2 default" onClick="TINY.box.hide();">'+top.getText('cancel',0)+'</button></td></tr></table>';
+    TINY.box.show({html:content,boxid:'optionsbox',width:210,height:windowheight,maskid:'whitemask',opacity:30,animate:true,close:false,openjs:function(){optionsBoxLoad();},closejs:function(){optionsBoxCancel();}});
+    $(document.getElementById("options")).addClass("blinking");
+    //$(document.getElementById("options")).removeClass("default");
+}
+
+function optionsBoxLoad(){
+    document.getElementById('speedBox').value=speed;
+    document.getElementById('factorBox').value=factor;
+    document.getElementById('scrollBox').value=scrollSpeed;
+    if (top.touchDevice){
+      document.getElementById('speedTouchBox').value=speedTouch;
+      document.getElementById('factorTouchBox').value=factorTouch;
+      document.getElementById('scrollTouchBox').value=scrollSpeedTouch;
+      document.getElementById('clickWaitTouchBox').value=clickWaitTouch;
+      document.getElementById('rightClickWaitTouchBox').value=rightClickWaitTouch;
+      printReverseScrollBox(reverseScrollTouch);
+    }
+}
+
+function toggleReverseScrollBox(){
+    if (reverseScrollTemp){
+      printReverseScrollBox(false);
+    }
+    else{
+      printReverseScrollBox(true);
+    }
+}
+
+function printReverseScrollBox(targetState){
+    reverseScrollTemp=targetState;
+    if (reverseScrollTemp){
+      $(document.getElementById("reverseScrollBox")).addClass("green");
+      $(document.getElementById("reverseScrollBox")).removeClass("default");
+    }
+    else{
+      $(document.getElementById("reverseScrollBox")).addClass("default");
+      $(document.getElementById("reverseScrollBox")).removeClass("green");
+    }
+}
+
+function optionsBoxCancel(){
+    //$(document.getElementById("options")).addClass("default");
+    $(document.getElementById("options")).removeClass("blinking");
+}
+
+function optionBoxOk(){
+    speed=parseInt(document.getElementById('speedBox').value);
+    factor=parseFloat(document.getElementById('factorBox').value);
+    scrollSpeed=parseInt(document.getElementById('scrollBox').value);
+    omega.SetUserSetting({name:"mouseSpeed",value:speed,useDevice:true});
+    omega.SetUserSetting({name:"mouseFactor",value:factor,useDevice:true});
+    omega.SetUserSetting({name:"mouseScrollSpeed",value:scrollSpeed,useDevice:true});
+    if (top.touchDevice){
+      speedTouch=parseInt(document.getElementById('speedTouchBox').value);
+      factorTouch=parseFloat(document.getElementById('factorTouchBox').value);
+      scrollSpeedTouch=parseInt(document.getElementById('scrollTouchBox').value);
+      clickWaitTouch=parseInt(document.getElementById('clickWaitTouchBox').value);
+      rightClickWaitTouch=parseInt(document.getElementById('rightClickWaitTouchBox').value);
+      reverseScrollTouch=reverseScrollTemp;
+      omega.SetUserSetting({name:"mouseTouchSpeed",value:speedTouch,useDevice:true});
+      omega.SetUserSetting({name:"mouseTouchFactor",value:factorTouch,useDevice:true});
+      omega.SetUserSetting({name:"mouseTouchScrollSpeed",value:scrollSpeedTouch,useDevice:true});
+      omega.SetUserSetting({name:"mouseTouchClickWait",value:clickWaitTouch,useDevice:true});
+      omega.SetUserSetting({name:"mouseTouchRightClickWait",value:rightClickWaitTouch,useDevice:true});
+      omega.SetUserSetting({name:"mouseTouchReverseScroll",value:reverseScrollTouch,useDevice:true});
+    }
+    TINY.box.hide();
+}
+//-----------------------------------OptionsBoxEnd-----------------------------------------//
+
+</script>
+
+</head>
+
+<body onOrientationchange="resetFingers();">
+<table id="contentTable" class="stdtable" cellpadding="0" cellspacing="0" style="width:100%;height:100%;">
+  <tr valign="top">
+    <td colspan="4" class="cutTop cutLeft"><br /></td>
+    <td id="ArrowKeysB" class="cutTop shrink"></td>
+  </tr>
+  <tr valign="bottom">
+    <td id="HotKeyModeB" class="shrink"></td>
+    <td class="cutTop cutLeft"><br /></td>
+    <td class="shrink"><input id="textBox" value="" class="w3 noClick" type="text" name="keybox" onblur="unFill();" onfocus="setTimeout('fill();',10);" onkeyup="keyboard0(this.value);" /></td>
+    <td class="cutTop cutLeft"><br /></td>
+    <td class="shrink"><button class="p1 w2 transparent"><br></button></button></td>
+  </tr>
+</table>
+<div class="overlay2 noClick" id="HotKeyMode"></div>
+<div class="overlay1 noClick" id="arrowKeys">
+  <table align="center" class="noClick" border="0" cellpadding="0" cellspacing="3">
+    <tr>
+      <td><button class="p3 w2 default noClick" onClick="TriggerKey1('Escape');">Esc</button></td>
+      <td><button id="arrowKeyUp" class="p3 w2 default noClick"><img class="noClick" src="/img/up.gif" /></button></td>
+      <td><button id="arrowKeyPageUp" class="p3 w2 default noClick"><img class="noClick" src="/img/up.gif" /></button></td>
+    </tr>
+    <tr>
+      <td><button id="arrowKeyLeft" class="p3 w2 default noClick"><img class="noClick" src="/img/left.gif" /></button></td>
+      <td><button class="p3 w2 default noClick" onClick="TriggerKey1('Return');">Enter</button></td>
+      <td><button id="arrowKeyRight" class="p3 w2 default noClick"><img class="noClick" src="/img/right.gif" /></button></td>
+    </tr>
+    <tr>
+      <td><button id="arrowKeyBackspace" class="p3 w2 default noClick"><img class="noClick" src="/img/left.gif" /></button></td>
+      <td><button id="arrowKeyDown" class="p3 w2 default noClick"><img class="noClick" src="/img/down.gif" /></button></td>
+      <td><button id="arrowKeyPageDown" class="p3 w2 default noClick"><img class="noClick" src="/img/down.gif" /></button></td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>

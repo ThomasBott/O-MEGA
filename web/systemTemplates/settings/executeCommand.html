@@ -1,0 +1,114 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+var choosenPCs=[0];
+
+function SelectPC(i){
+  choosenPCs.push(i);
+  tablePrint();
+}
+
+function UnSelectPC(i){
+  choosenPCs.splice(choosenPCs.indexOf(i),1);
+  tablePrint();
+}
+
+function tablePrint(){
+  var tablestr='<table class="rightBorder" cellpadding="0" cellspacing="3"><tr><td><button class="p2 w2 defaultNH">'+top.getText('pcs',0)+':</button></td></tr>';
+  for (var i=0; i<top.PCIDsArray.length; i++){
+    if(choosenPCs.indexOf(i)!=-1){
+      tablestr+='<tr><td><button class="p1 w2 green" onClick="UnSelectPC('+i+');">'+top.text["devices.jsonnames"][top.devices[top.PCIDsArray[i]][0]]+'</button></td></tr>';
+    }
+    else{
+      tablestr+='<tr><td><button class="p1 w2 default" onClick="SelectPC('+i+');">'+top.text["devices.jsonnames"][top.devices[top.PCIDsArray[i]][0]]+'</button></td></tr>';
+    }
+  }
+  tablestr+='</table>';
+  document.getElementById('pcchooser').innerHTML=tablestr;
+}
+
+function fillEmpty(){
+  document.getElementById("commandTextArea").value='';
+}
+
+function fillTriggerEvent(){
+  //document.getElementById("commandTextArea").value='eg.TriggerEvent(prefix="PREFIX", suffix="SUFFIX", payload=[])';
+  document.getElementById("commandTextArea").value='eg.TriggerEvent("MyEvent")';
+}
+
+function sendCommand(){
+  var eventname=document.getElementById("commandTextArea").value;
+  if (choosenPCs.length==0){
+    choosenPCs=[0];
+    tablePrint();
+  }
+  for (var i=0; i<choosenPCs.length; i++){
+    omega.TriggerEvent({command:"pyCommand",targetState:"[activate]","data":{"p1":eventname},target:"devices/"+top.devices[top.PCIDsArray[choosenPCs[i]]][0],lable:top.text["devices.jsonnames"][top.devices[top.PCIDsArray[choosenPCs[i]]][0]]+':'+top.getText('pyCommand')});
+  }
+}
+
+function enterHandler(event){
+  if(event.which==13){
+    event.preventDefault();
+    event.stopPropagation();
+    sendCommand();
+    return false;
+  }
+}
+
+omega.OnUpdate(function(ext){
+  if (ext=="reload"){
+    choosenPCs=[0];
+    tablePrint();
+  }
+});
+
+omega.OnLoad(function(){
+    tablePrint();
+    document.getElementById("emptyB").innerHTML = '<button class="p1 w2 default" onClick="fillEmpty();">'+top.getText('empty',1)+'</button>';
+    document.getElementById("triggerEventB").innerHTML = '<button class="p1 w2 default" onClick="fillTriggerEvent();">'+top.getText('triggerEvent',0)+'</button>';
+    document.getElementById("sendB").innerHTML = '<button class="p1 w2 default" onClick="sendCommand();">'+top.getText('send',0)+'</button>';
+    document.getElementById('commandTextArea').onkeydown = enterHandler;
+});
+
+</script>
+
+</head>
+
+<body>
+<center>
+<table style="height:100%; width:100%;" border="0" cellpadding="0" cellspacing="0">
+    <tr valign="top" class="title">
+      <td><br></td>
+    </tr>
+    <tr align="center" valign="top">
+      <td style="width:1px;"><div id="pcchooser"></div></td>
+      <td align="center">
+        <table border="0" cellpadding="0" cellspacing="3">
+          <tr align="left">
+            <td style="width:1px;"><div id="emptyB"></div></td>
+            <td style="width:1px;"><div id="triggerEventB"></div></td>
+            <td class="transparent1NH"></td>
+          </tr>
+          <tr>
+            <td colspan="3"><textarea id="commandTextArea" border="0"></textarea></td>
+          </tr>
+          <tr align="right">
+            <td colspan="2" class="transparent1NH"></td>
+            <td style="width:1px;"><div id="sendB"></div></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+</table>
+</center>
+</body>
+</html>

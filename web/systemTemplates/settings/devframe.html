@@ -1,0 +1,4148 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.md5.js"></script>
+<script type="text/javascript" src="/scripts/tinybox.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+omega.useNiceScroll=false;
+
+var devframeLoaded=false;
+var textFildOpen=false;
+var buttonWizard=false;
+var delArray=[];
+var dictIdArray=[];
+var dictArray=[];
+var dictArray2=[];
+var choosenMode="devices.json";
+var selectedTable="1";
+var lastSelectedTextField;
+var advancedMode=top.userSettings["advancedConfig"];
+
+var dragStarted=false;
+var startId;
+var overPosA;
+var dragline="line";
+var draglineB="line";
+var lineType="none";
+
+var toPrint=[];
+
+var allDataArray={};
+var allDataCols={};
+var allDataRows={};
+var iLoading=0;
+
+var dict={};
+var tableHeadArray={};
+var templatesIDsArray=[];
+var IDsArray={};
+var extensionsForTemplates=[];
+var templateChilds={};
+
+var pagesIDArray={};
+var devicesIDArray={};
+var interfacesIDArray={};
+var programsIDArray={};
+var statesIDArray={};
+var extensionsIDArray={};
+var availableTemplates={};
+var typePerThing={};
+
+var WinPCsArray=[];
+var templateThingsIDArray2=[];
+var buttonThingsIDArray=[];
+var buttonThingsIDArrayModes={};
+var loadedPlugins=[];
+omega.Request({'method':'getAllLoadedPlugins','callback':function(data){
+  if (typeof data === 'object'){
+    loadedPlugins=data.sort();
+  }
+  else{
+    loadedPlugins=JSON.parse(data).sort();
+  }
+}});
+
+var deviceTypesArray=[];
+var templateTargetsArray=[];
+var extensionCategoriesArray=[["device",""],["interface",""],["program",""]];
+var interfaceTypesArray=[];
+var programTypesArray=[];
+
+var primeAudioDevices=[];
+
+var buttonParameterData=[["cssClasses","str",""],["rename","str",""],["buttonModes","tab",[[["mode","dropdown","std",["std","autoRepeat","confirm","str","num","sld","rgb","dim","none"]],["modeSettings","str",""]],[["mode","dropdown","none",["confirm","str","num","sld","none"]],["modeSettings","str",""],["onlyRecord","checkbox",0]],[["mode","dropdown","none",["confirm","str","num","sld","none"]],["modeSettings","str",""],["onlyRecord","checkbox",0]],[["mode","dropdown","none",["confirm","str","num","sld","none"]],["modeSettings","str",""],["onlyRecord","checkbox",0]]]]];//["buttonMode2","dropdown","none",["str","num","sld","none"]],["buttonMode2Settings","str",""],["buttonMode2OnlyRecord","checkbox",0]];//id,type,defaultValue (sysDictionary:("buttonParameter",id))
+
+var tableModeArray=["extensionsCfg.json","devices.json","interfaces.json","programs.json","templatesCfg.json","views.json","pages.json","users.json","files.json","statesCfg.json","doku.json"];
+var advancedTableModeArray=["extensionsCfg.json","templatesCfg.json","statesCfg.json","files.json","doku.json"];
+var hiddenTableModeArray=["statesCfg.json","files.json","doku.json"];//
+var tableModeWithTranslationArray=["statesCfg.json","pages.json","buttons","templatesCfg.json","files.json","views.json"];
+var tableModeWithShortTranslationArray=["statesCfg.json"];
+var colorArray=[["red",""],["green",""],["yellow",""]];
+var buttonTypes=[["-10",[""]],["-5",["[?]"]],["0",[""]],["1",["[activate]","[none]"]],["2",["[activate]","[none]"]],["3",["[activate]","[none]"]]];
+var numbersString="[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16],[17],[18],[19],[20],[21],[22],[23],[24],[25]";
+var buttonMaxWidth=8;
+var allTableModeArray=tableModeArray.concat(["buttons"]);
+var hideForUser={}
+for (var i=0; i<allTableModeArray.length; i++){
+  hideForUser[allTableModeArray[i]]=[];
+}
+hideForUser["buttons"].push(4);
+
+var tableHeadLanguageArray=[0,1];
+
+function reloadTableHead(){
+  tableHeadArray["devices.json"]=[['nameId','id'],['type','arr2',deviceTypesArray],['parameters','longStr'],['targetPCID','arr2',WinPCsArray],['dependencies','arr']];
+  tableHeadArray["interfaces.json"]=[['nameId','id'],['type','arr2',interfaceTypesArray],['parameters','longStr'],['targetPCID','arr2',WinPCsArray],['dependencies','arr']];
+  tableHeadArray["programs.json"]=[['nameId','id'],['type','arr2',programTypesArray],['parameters','longStr'],['targetPCID','arr2',WinPCsArray],['dependencies','arr']];
+  tableHeadArray["views.json"]=[['nameId','id'],['primeAudio','arr2',primeAudioDevices]];
+  tableHeadArray["pages.json"]=[['nameId','id'],['idOfParent','arr2',[['hide',''],['-','']].concat(IDsArray['pages.json'])],['target','arr2',templateThingsIDArray2],['template','dic2','availableTemplates[typePerThing[allDataArray[\'pages.json\'][i][2]]]'],['HiFi','longStr'],['buttons','longStr'],['views','arr']];
+  tableHeadArray["statesCfg.json"]=[['nameId','id'],['color','arr2',colorArray],['evaluateGuess','checkbox'],['invisibleButton','checkbox']];
+  tableHeadArray["extensionsCfg.json"]=[['nameId','id'],['version','str'],['category','arr2',extensionCategoriesArray],['requiredPlugins','arr'],['settings','longStr'],['parameters','longStr'],['responseInBackend','longStr'],['actions','longStr'],['actionButtonCommandParameters','longStr'],['actionButtonResponses','longStr'],['actionButtonParameters','longStr']];
+  tableHeadArray["templatesCfg.json"]=[['nameId','id'],['version','str'],['idOfParent','arr2',[['-','']].concat(IDsArray['templatesCfg.json'])],['targetType','arr2',[['-','']].concat(extensionsForTemplates)],['filepathOfTheTemplate','longStr'],['buttons','longStr'],['customButtons','checkbox'],['parameters','longStr']];
+  tableHeadArray["users.json"]=[['nameId','id'],['setPW','longStr'],['views','arr'],['parameters','longStr']];
+  tableHeadArray["files.json"]=[['id','longStr'],['idOfParent','str'],['target','longStr'],['filepathOfTheTemplate','longStr'],['HiFi','longStr'],['buttons','longStr'],['frameToBeOpenedIn','longStr'],['emptyCache','checkbox'],['forceReload','checkbox'],['loaded','checkbox'],['views','arr']];
+  tableHeadArray["doku.json"]=[['nameId','id'],['type','arr2',[['function',''],['constant','']]],['syntax','longStr'],['description','longStr'],['returnType','arr2',[['undefined',''],['String',''],['Integer',''],['Bool',''],['Array',''],['Dict',''],['Function','']]],['returnDescription','longStr'],['parameters','str'],['examples','str']];
+  tableHeadArray["buttons"]=[['nameId','id'],['target','arr2ButtonTarget',buttonThingsIDArray],['mode','dic1',buttonThingsIDArrayModes,1],['type','arr'],['scope','arr'],['commandForBackend','longStr'],['responseInBackend','longStr'],['parameters','longStr'],['calculatePageState','checkbox'],['views','arr']];
+}
+reloadTableHead();
+
+function mode(nr){
+  choosenMode=tableModeArray[nr];
+  reloadTableHead();
+  var tablestr='<table class="rightBorder" cellpadding="0" cellspacing="3"><tr><td><button class="p2 w2 defaultNH">'+top.getText('mode',0)+':</button></td></tr>';
+  for (var i=0;i<tableModeArray.length;i++){
+    if (hiddenTableModeArray.indexOf(tableModeArray[i])==-1 && (advancedMode==true || advancedTableModeArray.indexOf(tableModeArray[i])==-1)){
+      tablestr+='<tr><td class="bottom"><button class="p1 w2 ';
+      if (nr===i){
+        tablestr+='green';
+      }
+      else{
+        tablestr+='default';
+      }
+      if (advancedMode){
+        tablestr+='" onClick="getTable(true,false); mode('+i+');">'+tableModeArray[i].replace('.json','')+'</button></td></tr>';
+      }
+      else{
+        tablestr+='" onClick="getTable(true,false); mode('+i+');">'+top.getText('devframe',tableModeArray[i])+'</button></td></tr>';
+      }
+    }
+  }
+  if (advancedMode){
+	tablestr+='<tr><td class="p2"></td></tr><tr><td class="bottom"><button class="p1 w2 default" onClick="createAPIDocu();">'+top.getText('devframe','createAPIDocu')+'</button></td></tr>';
+  }
+  tablestr+='</table>';
+  document.getElementById('chooserT').innerHTML=tablestr;
+  tablePrint();
+}
+
+function dataLoad(o){
+  if (o.OK){
+    iLoading=0;
+    $.post("/config/dictionary.json","request", function(data){
+      if (typeof data === 'object'){
+        dict=data;
+      }
+      else{
+        dict=JSON.parse(data);
+      }
+      dataLoadEnd();
+    });
+    for (var j=0; j<tableModeArray.length; j++){
+      $.post("/config/"+tableModeArray[j],"request", dataLoad3(j));
+    }
+  }
+  else{
+    top.openPage('guiSettings');
+  }
+}
+
+var dataLoad3 = function(j){
+  return function(data){
+    if (typeof data === 'object'){
+        allDataArray[tableModeArray[j]]=data;
+    }
+    else{
+        allDataArray[tableModeArray[j]]=JSON.parse(data);
+    }
+    allDataRows[tableModeArray[j]]=allDataArray[tableModeArray[j]].length;
+    allDataCols[tableModeArray[j]]=tableHeadArray[tableModeArray[j]].length;
+    buildIDsArray(tableModeArray[j]);
+    dataLoadEnd();
+  }
+}
+
+function buildIDsArray(mode){
+  IDsArray[mode]=[];
+  if (mode=="buttons"){
+    for (var i=0; i<allDataRows[mode]; i++){
+      IDsArray[mode].push([allDataArray[mode][i][0],choosenModeOld+allDataArray[choosenModeOld][selectedButtonsFieldId.split(":")[1]][0]+"names"]);
+    }
+  }
+  else{
+    for (var i=0; i<allDataRows[mode]; i++){
+      IDsArray[mode].push([allDataArray[mode][i][0],mode+"names"]);
+    }
+  }
+}
+
+function dataLoadEnd(){
+  iLoading++;
+  if (iLoading==tableModeArray.length+1){
+    iLoading=0;
+    
+    templatesIDsArray=[["-",""]];
+    templateTargetsArray=[];
+    
+    templateThingsIDArray2=[];
+    buttonThingsIDArray=[["frontend","devframe"],["macro","devframe"]];
+    buttonThingsIDArrayModes={};
+    buttonThingsIDArrayModes["macro"]=["","","","","","","",JSON.stringify([["macro","Button Macro",""],["copy","Link Button",""]]),""];
+    buttonThingsIDArrayModes["frontend"]=["","","","","","","",JSON.stringify([["jsCommand","JavaScript Command","[all]"]]),JSON.stringify({"jsCommand":{"[all]":[["command","JS command","str","","0"]]}})];
+    
+    deviceTypesArray=[];
+    interfaceTypesArray=[];
+    programTypesArray=[];
+    extensionsIDArray={};
+    extensionsForTemplates=[];
+    availableTemplates={"-":[]};
+    for (var j=0; j<allDataArray["extensionsCfg.json"].length; j++){
+      extensionsIDArray[allDataArray["extensionsCfg.json"][j][0]]=j;
+      availableTemplates[allDataArray["extensionsCfg.json"][j][0]]=[];
+      var tempType= allDataArray["extensionsCfg.json"][j][2];
+      if (tempType=="device"){
+        deviceTypesArray.push([allDataArray["extensionsCfg.json"][j][0],"extensionsCfg.jsonnames"]);
+      }
+      else if (tempType=="interface"){
+        interfaceTypesArray.push([allDataArray["extensionsCfg.json"][j][0],"extensionsCfg.jsonnames"]);
+      }
+      else if (tempType=="program"){
+        programTypesArray.push([allDataArray["extensionsCfg.json"][j][0],"extensionsCfg.jsonnames"]);
+      }
+      if (tempType!="interface"){
+        extensionsForTemplates.push([allDataArray["extensionsCfg.json"][j][0],"extensionsCfg.jsonnames"]);
+      }
+    }
+    templatesIDArray={};
+    for (var j=0; j<allDataArray["templatesCfg.json"].length; j++){
+      templatesIDArray[allDataArray["templatesCfg.json"][j][0]]=j;
+      if(allDataArray["templatesCfg.json"][j][2]==="-"){
+        templatesIDsArray.push([allDataArray["templatesCfg.json"][j][0],"templatesCfg.jsonnames"]);
+        availableTemplates[allDataArray["templatesCfg.json"][j][3]].push([allDataArray["templatesCfg.json"][j][0],"templatesCfg.jsonnames"]);
+        if (templateTargetsArray.indexOf(allDataArray["templatesCfg.json"][j][3])===-1){
+          templateTargetsArray.push(allDataArray["templatesCfg.json"][j][3]);
+        }
+      }
+    }
+    if (templateTargetsArray.indexOf("-")!=-1){
+      templateThingsIDArray2.push(["-",""]);
+    }
+    WinPCsArray=[];
+    typePerThing={"-":"-"};
+    devicesIDArray={};
+    for (var j=0; j<allDataArray["devices.json"].length; j++){
+      devicesIDArray[allDataArray["devices.json"][j][0]]=j;
+      typePerThing["devices/"+allDataArray["devices.json"][j][0]]=allDataArray["devices.json"][j][1];
+      try{
+        var tempModes=allDataArray["extensionsCfg.json"][extensionsIDArray[allDataArray["devices.json"][j][1]]];
+        if (typeof extensionsIDArray[allDataArray["devices.json"][j][1]]!="undefined"){
+          if (allDataArray["devices.json"][j][1]=="PC_WIN"){
+            WinPCsArray.push([allDataArray["devices.json"][j][0],"devices.jsonnames"]);
+          }
+          buttonThingsIDArray.push(["devices/"+allDataArray["devices.json"][j][0],"devices.jsonnames"]);
+          buttonThingsIDArrayModes["devices/"+allDataArray["devices.json"][j][0]]=tempModes;
+          if (templateTargetsArray.indexOf(allDataArray["devices.json"][j][1])!=-1){
+            templateThingsIDArray2.push(["devices/"+allDataArray["devices.json"][j][0],"devices.jsonnames"]);
+          }
+        }
+      }
+      catch(e){
+        //console.log(e);
+      }
+    }
+    interfacesIDArray={};
+    for (var j=0; j<allDataArray["interfaces.json"].length; j++){
+      interfacesIDArray[allDataArray["interfaces.json"][j][0]]=j;
+      typePerThing["interfaces/"+allDataArray["interfaces.json"][j][0]]=allDataArray["interfaces.json"][j][1];
+      try{
+        var tempModes=allDataArray["extensionsCfg.json"][extensionsIDArray[allDataArray["interfaces.json"][j][1]]];
+        if (typeof extensionsIDArray[allDataArray["interfaces.json"][j][1]]!="undefined"){
+          buttonThingsIDArray.push(["interfaces/"+allDataArray["interfaces.json"][j][0],"interfaces.jsonnames"]);
+          buttonThingsIDArrayModes["interfaces/"+allDataArray["interfaces.json"][j][0]]=tempModes;
+          //if (templateTargetsArray.indexOf(allDataArray["interfaces.json"][j][1])!=-1){
+            //templateThingsIDArray2.push(["interfaces/"+allDataArray["interfaces.json"][j][0],"interfaces.jsonnames"]);
+          //}
+        }
+      }
+      catch(e){
+        //console.log(e);
+      }
+    }
+    programsIDArray={};
+    for (var j=0; j<allDataArray["programs.json"].length; j++){
+      programsIDArray[allDataArray["programs.json"][j][0]]=j;
+      typePerThing["programs/"+allDataArray["programs.json"][j][0]]=allDataArray["programs.json"][j][1];
+      try{
+        var tempModes=allDataArray["extensionsCfg.json"][extensionsIDArray[allDataArray["programs.json"][j][1]]];
+        if (typeof extensionsIDArray[allDataArray["programs.json"][j][1]]!="undefined"){
+          buttonThingsIDArray.push(["programs/"+allDataArray["programs.json"][j][0],"programs.jsonnames"]);
+          buttonThingsIDArrayModes["programs/"+allDataArray["programs.json"][j][0]]=tempModes;
+          if (templateTargetsArray.indexOf(allDataArray["programs.json"][j][1])!=-1){
+            templateThingsIDArray2.push(["programs/"+allDataArray["programs.json"][j][0],"programs.jsonnames"]);
+          }
+        }
+      }
+      catch(e){
+        //console.log(e);
+      }
+    }
+    pagesIDArray={};
+    for (var j=0; j<allDataArray["pages.json"].length; j++){
+      pagesIDArray[allDataArray["pages.json"][j][0]]=j;
+    }
+    statesIDArray={};
+    for (var j=0; j<allDataArray["statesCfg.json"].length; j++){
+      statesIDArray[allDataArray["statesCfg.json"][j][0]]=j;
+    }
+    mode(tableModeArray.indexOf(choosenMode));
+    primeAudioDevices=[];
+    for (var i=0; i<top.devices.length; i++){
+      if(typeof top.devices[i][2]["masterAudio"]!="undefined" && top.devices[i][2]["masterAudio"]=="1"){
+        primeAudioDevices.push([top.devices[i][0],"devices.jsonnames"]);
+      }
+    }
+    devframeLoaded=true;
+  }
+}
+
+function createAllButtons(){
+  //pagesIDArray=[];
+  var result=[[],[]];
+  for (var j=0; j<allDataArray["pages.json"].length; j++){
+    //pagesIDArray[allDataArray["pages.json"][j][0]]=j;
+    if (allDataArray["pages.json"][j][3]!="-"){
+      var tempData=createAllButtons2(allDataArray["pages.json"][j][3],allDataArray["pages.json"][j][0]);
+      result[0]=result[0].concat(tempData[0]);
+      result[1]=result[1].concat(tempData[1]);
+    }
+    if (allDataArray["pages.json"][j][5]!=""){
+      try{
+        var pageName="";
+        var tempKey="pages.jsonnames";
+        var tempID1=allDataArray["pages.json"][j][0]+"/"+allDataArray["pages.json"][j][0]+"/";
+        if (typeof dict[tempKey]!="undefined" && typeof dict[tempKey][allDataArray["pages.json"][j][0]]!="undefined"){
+          pageName=dict[tempKey][allDataArray["pages.json"][j][0]]+"/";
+        }
+        else{
+          pageName=tempID1;
+        }
+        var tempData=JSON.parse(allDataArray["pages.json"][j][5]);
+        for (var i=0; i<tempData.length; i++){
+          var tempText=tempData[i][0];
+          tempData[i][0]=tempID1+tempText;
+          if ((tempData[i][1]!="macro" || tempData[i][2]!="copy") && (tempData[i][5]!="" || tempData[i][3][0]!="-10")){
+            var tempID=tempID1+tempText;
+            var tempKey="pages.json"+allDataArray["pages.json"][j][0]+"names";
+            if (typeof dict[tempKey]!="undefined" && typeof dict[tempKey][tempText]!="undefined"){
+              tempText=pageName+dict[tempKey][tempText];
+            }
+            else{
+              tempText=pageName+tempText;
+            }
+            result[0].push([tempID,tempText]);
+          }
+        }
+        result[1]=result[1].concat(tempData);
+      }
+      catch(e){
+        console.log('Button field for page "'+allDataArray["pages.json"][j][0]+'" is not correct!');
+      }
+    }
+  }
+  return result;
+}
+
+function createAllButtons2(tempTempateID,tempPageID){
+  var result=[[],[]];
+  for (var y=0; y<allDataArray["templatesCfg.json"].length; y++){
+    if (allDataArray["templatesCfg.json"][y][0]==tempTempateID){
+      var tempData=createButtonsPerTemplate(tempTempateID,tempPageID);
+      result[0]=result[0].concat(tempData[0]);
+      result[1]=result[1].concat(tempData[1]);
+    }
+    else if(allDataArray["templatesCfg.json"][y][2]==tempTempateID){
+      var tempData=createAllButtons2(allDataArray["templatesCfg.json"][y][0],tempPageID)
+      result[0]=result[0].concat(tempData[0]);
+      result[1]=result[1].concat(tempData[1]);
+    }
+  }
+  return result;
+}
+
+function createButtonsPerTemplate(tempTempateID,tempPageID){
+  tempPageID=tempPageID||"";
+  var pageName="";
+  var tempID1=tempPageID+"/"+tempTempateID+"/";
+  if (tempPageID!=""){
+    var tempKey="pages.jsonnames";
+    var tempKey2="templatesCfg.jsonnames";
+    if (typeof dict[tempKey]!="undefined" && typeof dict[tempKey][tempPageID]!="undefined" && typeof dict[tempKey2]!="undefined" && typeof dict[tempKey2][tempTempateID]!="undefined"){
+      pageName=dict[tempKey][tempPageID]+"/"+dict[tempKey2][tempTempateID]+"/";
+    }
+    else{
+      pageName=tempID1;
+    }
+  }
+  if (allDataArray["templatesCfg.json"][templatesIDArray[tempTempateID]][5]!=""){
+    var result=[[],[]];
+    try{
+      var tempData=JSON.parse(allDataArray["templatesCfg.json"][templatesIDArray[tempTempateID]][5]);
+      result[1]=tempData;
+      for (var i=0; i<tempData.length; i++){
+        var tempText=tempData[i][0];
+        result[1][i][0]=tempID1+tempText;
+        if ((tempData[i][1]!="macro" || tempData[i][2]!="copy") && (tempData[i][5]!="" || tempData[i][3][0]!="-10")){
+          var tempID=tempID1+tempText;
+          var tempKey="templatesCfg.json"+tempTempateID+"names";
+          if (typeof dict[tempKey]!="undefined" && typeof dict[tempKey][tempText]!="undefined"){
+            tempText=pageName+dict[tempKey][tempText];
+          }
+          else{
+            tempText=pageName+tempText;
+          }
+          result[0].push([tempID,tempText]);
+        }
+      }
+      return result;
+    }
+    catch(e){
+      console.log('Button field for template "'+tempTempateID+'" is not correct!');
+      return [[],[]];
+    }
+  }
+  else{
+    return [[],[]];
+  }
+}
+
+function tablePrint(){
+  buildIDsArray(choosenMode);
+  toPrint=[];
+  var tablestr=printHead();
+  for (var i=0; i<allDataRows[choosenMode]; i++){
+    tablestr+=printLine(i);
+  }
+  tablestr+=printFoot();
+  document.getElementById('content'+selectedTable).innerHTML=tablestr;
+  for (var i=0; i<toPrint.length; i++){
+    if (typeof toPrint[i][1]!="string"){
+      toPrint[i][1]=JSON.stringify(toPrint[i][1]);
+    }
+    document.getElementById(toPrint[i][0]).value=toPrint[i][1];//because of umlauts etc!
+    if (!toPrint[i][2] && toPrint[i][1]!==""){
+      $(document.getElementById(toPrint[i][0])).addClass("green");
+    }
+  }
+  applyTouchHandler('content'+selectedTable);
+}
+
+function printHead(){
+  var tablestr='<table class="stdtable2" cellpadding="0" cellspacing="0">';
+  if (advancedMode){
+    tablestr+='<tr><td></td><td></td>';
+    for (var i=0; i<allDataCols[choosenMode]; i++){
+      if(tableHeadArray[choosenMode][i][1]!="hidden"){
+        tablestr+='<td class="transparent0NH special2">'+i+'</td>';
+      }
+    }
+    if (tableModeWithTranslationArray.indexOf(choosenMode)!=-1){
+      tablestr+='<td></td>';
+      for (var i=0; i<tableHeadLanguageArray.length; i++){
+        tablestr+='<td class="transparent0NH special2">'+i+'</td>';
+      }
+      if (tableModeWithShortTranslationArray.indexOf(choosenMode)!=-1){
+        for (var i=0; i<tableHeadLanguageArray.length; i++){
+          tablestr+='<td class="transparent0NH special2">'+i+'</td>';
+        }
+      }
+    }
+  }
+  tablestr+='</tr><tr><td></td><td class="transparent0NH special2 text Cred">'+top.getText('delete',1)+'</td>';
+  for (var i=0; i<allDataCols[choosenMode]; i++){
+    if(tableHeadArray[choosenMode][i][1]!="hidden" && (advancedMode || hideForUser[choosenMode].indexOf(i)==-1)){
+      tablestr+='<td class="transparent0NH special2">'+top.getText("devframe",tableHeadArray[choosenMode][i][0])+'</td>';
+    }
+    else{
+      tablestr+='<td style="display:none;"></td>';
+    }
+  }
+  if (tableModeWithTranslationArray.indexOf(choosenMode)!=-1){
+    if(advancedMode){
+      tablestr+='<td class="transparent0NH special2">dictID</td>';
+    }
+    else{
+      tablestr+='<td></td>';
+    }
+    for (var i=0; i<tableHeadLanguageArray.length; i++){
+      tablestr+='<td class="transparent0NH special2">'+top.getText("languages",tableHeadLanguageArray[i])+'</td>';
+    }
+    if (tableModeWithShortTranslationArray.indexOf(choosenMode)!=-1){
+      for (var i=0; i<tableHeadLanguageArray.length; i++){
+        tablestr+='<td class="transparent0NH special2">'+top.getText("languages",tableHeadLanguageArray[i])+'(short)</td>';
+      }
+    }
+  }
+  tablestr+='</tr>';
+  return tablestr;
+}
+
+function printLine(i){
+  var arr=allDataArray[choosenMode][i];
+  var tablestr='<tr id="'+draglineB+i+'"><td id="'+choosenMode+':num:'+i+'" class="transparent0NH special w1 move ';
+  if (advancedMode){
+    tablestr+='right">&nbsp;'+i+'&nbsp;';
+  }
+  else{
+    tablestr+='center"><img src="/img/drag2.png">';
+  }
+  tablestr+='</td><td class="transparent0NH special"><input class="checkbox" type="checkbox" id="'+choosenMode+':'+i+':del" /></td>';
+  for (var y=0; y<allDataCols[choosenMode]; y++){
+    var ydata=tableHeadArray[choosenMode][y];
+    var tempType=ydata[1];
+    if (tempType=="checkbox"){
+      if (arr[y]===1){
+        tablestr+='<td class="transparent0NH special"><input class="checkbox" type="checkbox" id="'+choosenMode+':'+i+':'+y+'" checked="checked" /></td>';
+      }
+      else{
+        tablestr+='<td class="transparent0NH special"><input class="checkbox" type="checkbox" id="'+choosenMode+':'+i+':'+y+'" /></td>';
+      }
+    }
+    else if (tempType=="arr2" || tempType=="arr2ButtonTarget"){
+      if (tempType=="arr2ButtonTarget" && buttonsTarget!="-"){
+        var tempText=String(buttonsTarget);
+        var tempMode;
+        var tempTextArr=tempText.split("/");
+        if (tempTextArr.length==2){
+           tempMode=tempTextArr[0]+".jsonnames";
+           tempText=tempTextArr[1];
+        }
+        else{
+          tempMode="extensionsCfg.jsonnames";
+        }
+        if (typeof dict[tempMode]!="undefined" && typeof dict[tempMode][tempText]!="undefined"){
+          tempText=dict[tempMode][tempText];
+        }
+        tablestr+='<td id="'+choosenMode+':'+i+':'+y+'" class="transparent0NH special">'+tempText+'</td>';
+        toPrint.push([choosenMode+':'+i+':'+y,buttonsTarget,true]);
+      }
+      else{
+        tablestr+='<td class="transparent0NH special"><select onChange="changeSelect(this.id);" class="default left p1 w3" id="'+choosenMode+':'+i+':'+y+'">';
+        for (var q=0; q<ydata[2].length; q++){
+          //if (arr[y]!=ydata[2][q][0]){//geht nicht wenn es bewegt wird!
+              var tempText=String(ydata[2][q][0]);//id
+              var tempMode=ydata[2][q][1];//configfile+names
+              if (tempMode!=""){
+                if (tempText.split("/").length==2){
+                  tempText=tempText.split("/")[1];
+                }
+                if (typeof dict[tempMode]!="undefined" && typeof dict[tempMode][tempText]!="undefined"){
+                  tempText=dict[tempMode][tempText];
+                }
+                else if (top.getText(tempMode,tempText)!="undefined"){
+                  tempText=top.getText(tempMode,tempText);
+                }
+              }
+              tablestr+='<option value="'+ydata[2][q][0]+'">'+tempText+'</option>';
+          //}
+        }
+        var newVal=arr[y];
+        if (newVal==""){
+          newVal=ydata[2][0][0];
+        }
+        toPrint.push([choosenMode+':'+i+':'+y,newVal,true]);
+        tablestr+='</select></td>';
+      }
+    }
+    else if (tempType=='dic2' || tempType=='dic1'){
+      tablestr+='<td class="transparent0NH special"><select onChange="changeSelect(this.id);" class="default left p1 w3" id="'+choosenMode+':'+i+':'+y+'">';
+      var tempData;
+      if (tempType=='dic1'){
+        if (buttonsTarget!="-" && typeof ydata[2][buttonsTarget]=="undefined"){
+          tempData=allDataArray["extensionsCfg.json"][extensionsIDArray[buttonsTarget]][7];
+        }
+        else{
+          try{
+            tempData=ydata[2][arr[ydata[3]]][7];
+          }
+          catch(e){
+            tempData="";
+          }
+        }
+        if (tempData!=""){
+          try{
+            tempData=JSON.parse(tempData);
+          }
+          catch(e){
+            tempData=[];
+          }
+        }
+        else{
+          tempData=[];
+        }
+        tempData=createDic(i,y,tempData,tempType);
+      }
+      else{
+        tempData=createDic(i,y,ydata[2],tempType);
+      }
+      tablestr+=tempData[0]+'</select></td>';
+      var newVal=arr[y];
+      if (newVal==""){
+        newVal=tempData[1];
+      }
+      toPrint.push([choosenMode+':'+i+':'+y,newVal,true]);
+    }
+    else if (tempType=='id'){
+      if (advancedMode){
+        tablestr+='<td class="transparent0NH special left"><button class="special transparentNH w3 left" id="'+choosenMode+':'+i+':'+y+'" onClick="openText(this.id);"';
+      }
+      else{
+        tablestr+='<td class="special left"><button class="default special w3 left" id="'+choosenMode+':'+i+':'+y+'" onClick="openText1(this.id);"';
+      }
+      tablestr+='>'+createButton(i,y)+'</button></td>';
+      toPrint.push([choosenMode+':'+i+':'+y,arr[y],true]);
+    }
+    else{
+      if (tempType=="num"){
+        if(arr[y]==null){
+          arr[y]="";
+        }
+        tablestr+='<td><input type="number" class="special left" id="'+choosenMode+':'+i+':'+y+'" /></td>';
+      }
+      else if (tempType=="pwd"){
+        tablestr+='<td><input type="password" class="special left" id="'+choosenMode+':'+i+':'+y+'" /></td>';
+      }
+      else{
+        if (tempType=="longStr"){
+          if ((choosenMode=="pages.json" && y==5 && typeof allDataArray["templatesCfg.json"][templatesIDArray[allDataArray[choosenMode][i][3]]]!="undefined" && !allDataArray["templatesCfg.json"][templatesIDArray[allDataArray[choosenMode][i][3]]][6])||(choosenMode=="extensionsCfg.json" && (y==6 && allDataArray[choosenMode][i][2]=="interface")||(y==9 && allDataArray[choosenMode][i][2]!="interface"))){
+            arr[y]="";
+            tablestr+='<td class="transparent0NH" id="'+choosenMode+':'+i+':'+y+'"></td>';
+          }
+          else if (advancedMode){
+            tablestr+='<td><input type="text" class="w4 special left" id="'+choosenMode+':'+i+':'+y+'" onClick="openText(this.id);" /></td>';
+          }
+          else{
+            if(hideForUser[choosenMode].indexOf(y)==-1){
+              tablestr+='<td><button class="default special w2" id="'+choosenMode+':'+i+':'+y+'" onClick="openText1(this.id);">'+top.getText("edit",0)+'...</button></td>';
+            }
+            else{
+              tablestr+='<td style="display:none;"><button id="'+choosenMode+':'+i+':'+y+'"></button></td>';
+            }
+          }
+        }
+        else if (tempType=="arr"){//
+          if ($.isArray(arr[y])){
+            arr[y]=arr[y].join();
+          }
+          if(advancedMode){
+            tablestr+='<td><input type="text" class="w2 special left" id="'+choosenMode+':'+i+':'+y+'" onClick="openText(this.id);" /></td>';
+          }
+          else{
+            if(hideForUser[choosenMode].indexOf(y)==-1){
+              tablestr+='<td><button class="default special w2" id="'+choosenMode+':'+i+':'+y+'" onClick="openText1(this.id);">'+top.getText("edit",0)+'...</button></td>';
+            }
+            else{
+              tablestr+='<td style="display:none;"><button id="'+choosenMode+':'+i+':'+y+'"></button></td>';
+            }
+          }
+        }
+        else if (tempType=="hidden"){
+          tablestr+='<td style="display:none;"><button id="'+choosenMode+':'+i+':'+y+'"></button></td>';
+        }
+        else{
+          if(advancedMode){
+            tablestr+='<td><input type="text" class="w2 special left" id="'+choosenMode+':'+i+':'+y+'" onClick="openText(this.id);" /></td>';
+          }
+          else{
+            if(hideForUser[choosenMode].indexOf(y)==-1){
+              tablestr+='<td><button class="default special w2" id="'+choosenMode+':'+i+':'+y+'" onClick="openText1(this.id);">'+top.getText("edit",0)+'...</button></td>';
+            }
+            else{
+              tablestr+='<td><input type="text" class="w2 special left" id="'+choosenMode+':'+i+':'+y+'" onClick="openText(this.id);" /></td>';
+            }
+          }
+        } 
+      }
+      if (typeof arr[y]=="undefined"){
+        arr[y]="";
+      }
+      toPrint.push([choosenMode+':'+i+':'+y,arr[y],advancedMode]);
+    }
+  }
+  if (tableModeWithTranslationArray.indexOf(choosenMode)!=-1){
+    tablestr+='<td id="'+choosenMode+'ddd:dict:'+i+'" class="transparent0NH move special ';
+    var tempKey=choosenMode;
+    if (choosenMode=="buttons"){
+      tempKey=choosenModeOld+allDataArray[choosenModeOld][selectedButtonsFieldId.split(":")[1]][0];
+    }
+    if(advancedMode){
+      tablestr+='left">'+tempKey+'/<br>'+arr[0]+'</td>';
+    }
+    else{
+      tablestr+='w1 center"><img src="/img/drag2.png">';
+    }
+    for (var z=0; z<tableHeadLanguageArray.length; z++){
+      tablestr+='<td><input onkeydown="printReturn(event);" type="text" class="w4';
+      var tempText="";
+      var tempId2=arr[0];
+      if (typeof dict[tempKey]!="undefined" && typeof dict[tempKey][tempId2]!="undefined" && typeof dict[tempKey][tempId2][z]!="undefined"){
+        tempText=dict[tempKey][tempId2][z];
+      }
+      tablestr+=' special left" id="'+choosenMode+'ddd:'+i+':'+z+'" onClick="openText(this.id);"/></td>';
+      toPrint.push([choosenMode+'ddd:'+i+':'+z,top.replaceuml(tempText,true),true]);
+    }
+    if (tableModeWithShortTranslationArray.indexOf(choosenMode)!=-1){
+      for (var z=0; z<tableHeadLanguageArray.length; z++){
+        tablestr+='<td><input onkeydown="printReturn(event);" type="text" class="w4';
+        if (typeof dict[choosenMode+"short"]!="undefined" && typeof dict[choosenMode+"short"][arr[0]]!="undefined" && typeof dict[choosenMode+"short"][arr[0]][z]!="undefined"){
+          tempText=dict[choosenMode+"short"][arr[0]][z];
+        }
+        tablestr+=' special left" id="'+choosenMode+'dddshort:'+i+':'+z+'" onClick="openText(this.id);"/></td>';
+        toPrint.push([choosenMode+'dddshort:'+i+':'+z,top.replaceuml(tempText,true),true]);
+      }
+    }
+  }
+  tablestr+='</tr>';
+  return tablestr;
+}
+
+function changeSelect(id){
+  if (choosenMode=="buttons"){
+    fillButtonWithDefault(id);
+  }
+  refresh();
+}
+
+function refresh(){
+  getTable(true,false);
+  tablePrint();
+}
+
+function createDic(i,y,src,mode){
+  var tempstr="";
+  var tempdef="";
+  if (mode=='dic2'){
+    try{
+      src=eval(src);
+    }
+    catch(err){
+      src=[["-",""]];
+    }
+  }
+  if (typeof src!="undefined" && typeof src[0]!="undefined"){
+    for (var q=0; q<src.length; q++){
+      if (mode=='dic2'){
+        var tempText=src[q][0];
+        var tempMode=src[q][1];
+        if (tempMode!=""){
+          if (tempText.split("/").length==2){
+            tempText=tempText.split("/")[1];
+          }
+          if (typeof dict[tempMode]!="undefined" && typeof dict[tempMode][tempText]!="undefined"){
+            tempText=dict[tempMode][tempText];
+          }
+          else if (top.getText(tempMode,tempText)!="undefined"){
+            tempText=top.getText(tempMode,tempText);
+          }
+        }
+        tempstr+='<option value="'+src[q][0]+'">'+tempText+'</option>';
+      }
+      else{
+        tempstr+='<option value="'+src[q][0]+'">'+src[q][1]+'</option>';
+      }
+    }
+    tempdef=src[0][0];
+  }
+  return [tempstr,tempdef];
+}
+
+
+function createButton(i,y){
+  var arr=allDataArray[choosenMode][i];
+  var tempText=arr[y];
+  var tempKey=choosenMode+"names";
+  if (choosenMode=="buttons"){
+    tempKey=choosenModeOld+allDataArray[choosenModeOld][selectedButtonsFieldId.split(":")[1]][0]+"names"
+  }
+  if (typeof dict[tempKey]!="undefined" && typeof dict[tempKey][arr[y]]!="undefined"){
+    tempText=dict[tempKey][arr[y]];
+  }
+  return tempText+"<br />(<font style='color:red'>"+arr[y]+"</font>)";
+}
+
+function printFoot(){
+  var tempColspan=(allDataCols[choosenMode]+2);
+  if (tableModeWithTranslationArray.indexOf(choosenMode)!=-1){
+    tempColspan+=3;
+  }
+  var tempVar='<tr><td colspan="'+tempColspan+'"><table class="stdtable" border="0" cellpadding="0" cellspacing="0"><tr>';
+  if(choosenMode=="buttons"){
+    tempVar+='<td class="cutTop cutLeft"><button class="p1 w2 default" onClick="OKButtons();">'+top.getText("ok",0)+'</button></td><td class="cutTop"><button class="p1 w2 default" onClick="cancelButtons();">'+top.getText('cancel',0)+'</button></td>';
+  }
+  else{
+    tempVar+='<td class="cutTop cutLeft"><button class="p1 w2 default Hgreen" onClick="getTable(false,true);">'+top.getText('saveChanges',0)+'</button></td><td class="cutTop"><button class="p1 w2 default Hred" onClick="omega.ShowSubmitBox({selectedObject:this,callback:dataLoad})">'+top.getText('reset',0)+'</button></td>';
+  }
+  tempVar+='<td class="cutTop"><button class="p1 w8 default" onClick="addLine();">+</button></td></tr></table></td></tr></table>';
+  return tempVar;
+}
+
+function applyTouchHandler(objid){
+  $(".move").on("touchstart", dragStart);
+  $(document.getElementById(objid)).on("touchend", dragEnd);
+  $(document.getElementById(objid)).on("touchmove", move);
+  $(document.getElementById(objid)).on("touchleave", cancel);
+  $(".move").on("mousedown", dragStart);
+  $(document.getElementById(objid)).on("mouseup", dragEnd);
+  $(document.getElementById(objid)).on("mousemove", move);
+  $(document.getElementById(objid)).on("mouseleave", cancel);
+}
+
+function switchTable(targetId){
+  if (targetId==1){
+    selectedTable="1";
+    document.getElementById("content2").innerHTML="";
+    $("#table2").hide(0,$("#table1").show(0,applyTouchHandler('content'+selectedTable)));
+    $("#tableM").show(0);
+    dragline="line";
+    draglineB="line";
+  }
+  else if(targetId==2){
+    selectedTable="2";
+    $("#table1").hide(0,$("#table2").show(0));
+    $("#tableM").hide(0);
+    dragline="jine";
+    draglineB="jine";
+  }
+}
+
+//----------------------------buttonsButtonStart------------------------------//
+var selectedButtonsFieldId;
+var choosenModeOld;
+var buttonsTarget;
+
+function showButtons(id){
+  getTable(true,false);
+  selectedButtonsFieldId=id;
+  var tempIdParts=id.split(":");
+  if (choosenMode=="templatesCfg.json"){
+    buttonsTarget=document.getElementById(tempIdParts[0]+":"+tempIdParts[1]+":3").value;
+    allDataCols["buttons"]=tableHeadArray["buttons"].length-1;
+  }
+  else{
+    buttonsTarget=document.getElementById(tempIdParts[0]+":"+tempIdParts[1]+":2").value;
+    allDataCols["buttons"]=tableHeadArray["buttons"].length;
+  }
+  var tempData=document.getElementById(id).value;
+  try{
+    allDataArray["buttons"]=JSON.parse(tempData);
+  }
+  catch(e){
+    allDataArray["buttons"]=[];
+  }
+  switchTable(2);
+  choosenModeOld=choosenMode;
+  choosenMode="buttons";
+  allDataRows["buttons"]=allDataArray["buttons"].length;
+  reloadTableHead();
+  tablePrint();
+}
+
+function OKButtons(){
+  getTable(true,true);
+  var tempData="";
+  if (allDataArray["buttons"].length!=0){
+      tempData=JSON.stringify(allDataArray["buttons"]);
+  }
+  switchTable(1);
+  choosenMode=choosenModeOld;
+  reloadTableHead();
+  tablePrint();
+  document.getElementById(selectedButtonsFieldId).value=tempData;
+  refresh();
+}
+
+function cancelButtons(){
+  switchTable(1);
+  choosenMode=choosenModeOld;
+  reloadTableHead();
+  tablePrint();
+}
+//----------------------------buttonsButtonEnd--------------------------------//
+//-------------------------------BChooseStart---------------------------------//
+chooserSelectedArray = [];
+chooserSelectedArray2 = [];
+function printChooser(id){
+  document.getElementById("boxTitle").innerHTML=top.getText("devframe",tableHeadArray[choosenMode][id.split(":")[2]][0])+":";
+  var tempchooserSelectedArray = document.getElementById(id).value.split(",");
+  chooserSelectedArray = [];
+  chooserSelectedArray2 = [];
+  var tempLine=id.split(":")[1];
+  var printTarget=document.getElementById(choosenMode+':'+tempLine+":1").value;
+  var printTargetMode=document.getElementById(choosenMode+':'+tempLine+":2").value;
+  var allowedStates = GetAllowedStates(printTarget,printTargetMode);
+  for (var i=0; i<tempchooserSelectedArray.length; i++){
+    if (tempchooserSelectedArray[i]!="" && (allowedStates.length==0 || allowedStates.indexOf(tempchooserSelectedArray[i])!=-1) && top.getText('statesCfg.json',tempchooserSelectedArray[i])!="undefined" && allDataArray["statesCfg.json"][statesIDArray[tempchooserSelectedArray[i]]][3]==0){
+      chooserSelectedArray.push(tempchooserSelectedArray[i]);
+      chooserSelectedArray2.push(tempchooserSelectedArray[i]);
+    }
+  }
+  var content='<table class="rightBorder" cellpadding="0" cellspacing="3">';
+  for (var i=0; i<allDataArray["statesCfg.json"].length ;i++){
+    if (allDataArray["statesCfg.json"][i][3]==0 && (allowedStates.length==0 || allowedStates.indexOf(allDataArray["statesCfg.json"][i][0])!=-1)){
+      var curval=allDataArray["statesCfg.json"][i][0];
+      if (chooserSelectedArray.indexOf(curval)!=-1){
+        content+='<tr><td id="BChoose'+curval+'B"><button class="p1 w2 green" onClick="BChooseunselect(\''+curval+'\')">'+top.getText('statesCfg.json',curval)+'</button></td></tr>';
+      }
+      else{
+        content+='<tr><td id="BChoose'+curval+'B"><button class="p1 w2 default" onClick="BChooseselect(\''+curval+'\')">'+top.getText('statesCfg.json',curval)+'</button></td></tr>';
+      }
+    }
+  }
+  content+='</table>';
+  document.getElementById("BChooser").innerHTML=content;
+  printSorter();
+  textFildOpen=true;
+}
+
+function GetAllowedStates(printTarget,printTargetMode){
+  var targetTypeActions;
+  if (printTarget!="-" && typeof buttonThingsIDArrayModes[printTarget]=="undefined"){
+    targetTypeActions=allDataArray["extensionsCfg.json"][extensionsIDArray[printTarget]][7];
+  }
+  else{
+    try{
+      targetTypeActions=buttonThingsIDArrayModes[printTarget][7];
+    }
+    catch(e){
+      targetTypeActions="";
+    }
+  }
+  var allowedStates = [];
+  if (targetTypeActions!=""){
+    try{
+      targetTypeActions=JSON.parse(targetTypeActions);
+    }
+    catch(e){
+      targetTypeActions=[];
+    }
+    for (var i=0; i<targetTypeActions.length; i++){
+      if (targetTypeActions[i][0]==printTargetMode){
+        allowedStates = targetTypeActions[i][2].replace("[numbers]",numbersString).split(",");
+        break;
+      }
+    }
+  }
+  if (allowedStates.length==1 && (allowedStates[0]=="" || allowedStates[0]=="[all]")){
+    allowedStates=[];
+  }
+  else{
+    for (var i=0; i<allowedStates.length; i++){
+      allowedStates[i]=allowedStates[i].trim();
+    }
+  }
+  return allowedStates;
+}
+
+function BChooseselect(st){
+  document.getElementById("BChoose"+st+"B").innerHTML='<button class="p1 w2 green" onClick="BChooseunselect(\''+st+'\')">'+top.getText('statesCfg.json',st)+'</button>';
+  chooserSelectedArray.push(st);
+  printSorter();
+}
+
+function BChooseunselect(st){
+  document.getElementById("BChoose"+st+"B").innerHTML='<button class="p1 w2 default" onClick="BChooseselect(\''+st+'\')">'+top.getText('statesCfg.json',st)+'</button>';
+  var nr=chooserSelectedArray.indexOf(st);
+  chooserSelectedArray.splice(nr,1);
+  printSorter();
+}
+
+function printSorter(){
+  var content='<table border="0" cellpadding="0" cellspacing="3">';
+  for (var i=0; i<chooserSelectedArray.length; i++){
+    content+='<tr id="Bine'+i+'"><td id="Bp.'+i+'.0" class="move transparent0 p1 w1"><img src="/img/drag2.png" /></td><td id="Bp.'+i+'.1" class="p1 w2 transparent0NH text">';
+    //if (chooserSelectedArray[i].length==5 && chooserSelectedArray[i].substring(0,2)=="[c"){
+    //  content+='<input id="Inp.'+i+'" class="w2" value="'+chooserSelectedArray[i]+'"></input>';
+    //}
+    //else{
+      content+=top.getText('statesCfg.json',chooserSelectedArray[i]);
+    //}
+    content+='</td></tr>';
+  }
+  content+='</table>';
+  document.getElementById("BSorter").innerHTML=content;
+  applyTouchHandler("BSorter");
+}
+
+function BChooseOK(id){
+  var finalArray=chooserSelectedArray;
+  if (finalArray.length==1){
+    finalArray.push("[none]");
+  }
+  var preValue=document.getElementById(id).value;
+  document.getElementById(id).value=finalArray.join();
+  if (preValue!=document.getElementById(id).value){
+    fillButtonWithDefault(id);
+    if (document.getElementById(id).value!=""){
+      buttonWizard=true;
+    }
+  }
+  TINY.box.hide();
+}
+
+var chooserSelected1;
+var chooserSelected2;
+var chooserSelected3;
+var chooserAllowedStates;
+
+function printChooser0(id){
+  document.getElementById("boxTitle").innerHTML=top.getText("devframe",tableHeadArray[choosenMode][id.split(":")[2]][0])+":";
+  var tempLine=id.split(":")[1];
+  var printTarget=document.getElementById(choosenMode+':'+tempLine+":1").value;
+  var printTargetMode=document.getElementById(choosenMode+':'+tempLine+":2").value;
+  chooserAllowedStates = GetAllowedStates(printTarget,printTargetMode);
+  printChooser1(document.getElementById(id).value);
+}
+
+function printChooser1(selection){
+  if (selection==""){
+    selection="0,2,2";
+  }
+  selection=selection.split(",");
+  chooserSelected2=selection[1]||"2";
+  chooserSelected3=selection[2]||chooserSelected2;
+  if(selection[0]!="0" || chooserSelected2%chooserSelected3!=0){
+    chooserSelected3=chooserSelected2;
+  }
+  var content='<table align="center" border="0" cellpadding="0" cellspacing="3"><tr></tr><td></td>';
+  for (var i=0; i<buttonMaxWidth; i++){
+    if ((i+1)==chooserSelected2){
+      content+='<td><button class="p1 w1 green">'+(i+1)+'</button></td>';
+    }
+    else{
+      content+='<td><button class="p1 w1 default" onClick="printChooser1(chooserSelected1+\','+(i+1)+',\'+chooserSelected3)">'+(i+1)+'</button></td>';
+    }
+  }
+  content+='</tr>';
+  for (var i=0; i<buttonTypes.length; i++){
+    var goOn=true;
+    if (buttonTypes[i][1][0]!=""){
+      for (var j=0; j<chooserAllowedStates.length; j++){
+        if (buttonTypes[i][1].indexOf(chooserAllowedStates[j])==-1){
+          goOn=false;
+          break;
+        }
+      }
+    }
+    if (goOn){
+      content+='<tr><td><button id="chooser'+i+'" class="p1 w1 default" onClick="selectChooser1(\''+buttonTypes[i][0]+'\')">';
+      if (advancedMode){
+        content+=buttonTypes[i][0]+"<br>"+top.getText("devframeButtonTypes",buttonTypes[i][0]);
+      }
+      else{
+        content+=top.getText("devframeButtonTypes",buttonTypes[i][0]);
+      }
+      content+='</button></td><td colspan="'+chooserSelected2+'" id="buttonType'+i+'"></td></tr>';
+    }
+  }
+  if(selection[0]=="0"){
+    content+='<tr><td></td>';
+    for (var i=0; i<buttonMaxWidth; i++){
+      if (chooserSelected2 % (i+1)==0){
+        if ((i+1)==chooserSelected3){
+          content+='<td><button class="p1 w1 green">'+(i+1)+'</button></td>';
+        }
+        else{
+          content+='<td><button class="p1 w1 default" onClick="printChooser1(chooserSelected1+\',\'+chooserSelected2+\','+(i+1)+'\')">'+(i+1)+'</button></td>';
+        }
+      }
+      else{
+        content+='<td></td>';
+      }
+    }
+    content+='</tr>';
+  }
+  content+='</table>';
+  document.getElementById("BChooser").innerHTML=content;
+  selectChooser1(selection[0]);
+  textFildOpen=true;
+}
+
+function printbuttonTypeExample(selected){
+  for (var i=0; i<buttonTypes.length; i++){
+    var goOn=true;
+    if (buttonTypes[i][1][0]!=""){
+      for (var j=0; j<chooserAllowedStates.length; j++){
+        if (buttonTypes[i][1].indexOf(chooserAllowedStates[j])==-1){
+          goOn=false;
+          break;
+        }
+      }
+    }
+    if (goOn){
+      if (i==selected){
+        if (buttonTypes[i][0]=="-10"){
+          document.getElementById("buttonType"+i).innerHTML='<div class="p2 w'+chooserSelected2+'">[invisible]</div>';
+        }
+        else if (buttonTypes[i][0]=="-9"){
+          document.getElementById("buttonType"+i).innerHTML='<div class="p2 w'+chooserSelected2+'">[empty]</div>';
+        }
+        else if (buttonTypes[i][0]=="-5"){
+          document.getElementById("buttonType"+i).innerHTML='<div class="p2 w'+chooserSelected2+'">Text</div>';
+        }
+        else if (buttonTypes[i][0]=="0"){
+          var content='<table class="stdtable" cellpadding="0" cellspacing="0"><tr>';
+          if(chooserSelected2==chooserSelected3){
+            content+='<td class="cutLeft cutTop"><button class="p2 w'+chooserSelected2+' defaultNH">Text</button></td></tr><tr><td class="cutLeft" align="left"><button class="p1 w'+chooserSelected3+' defaultNH">'+top.getText('statesCfg.json','[on]')+'</button></td></tr><tr><td class="cutLeft" align="left"><button class="p1 w'+chooserSelected3+' defaultNH">'+top.getText('statesCfg.json','[off]')+'</button></td></tr><tr><td class="cutLeft"><button class="p1 w'+chooserSelected3+' defaultNH">...</button></td>';
+          }
+          else{
+            var neededDummys=(chooserSelected2/chooserSelected3)-3;
+            content+='<td colspan="'+(chooserSelected2/chooserSelected3)+'" class="cutLeft cutTop"><button class="p2 w'+chooserSelected2+' defaultNH">Text</button></td></tr><tr><td class="cutLeft"><button class="p1 w'+chooserSelected3+' defaultNH">'+top.getText('statesCfg.json','[on]')+'</button></td>';
+            if (neededDummys>0){
+              content+='<td><button class="p1 w'+chooserSelected3+' defaultNH">'+top.getText('statesCfg.json','[off]')+'</button></td><td><button class="p1 w'+chooserSelected3+' defaultNH">...</button></td>';
+              for (var y=0; y<neededDummys; y++){
+                content+='<td class="p-9 w'+chooserSelected3+'"></td>';
+              }
+            }
+            else{
+              if((chooserSelected2/chooserSelected3)==2){
+                content+='<td><button class="p1 w'+chooserSelected3+' defaultNH">'+top.getText('statesCfg.json','[off]')+'</button></td></tr><tr><td class="cutLeft"><button class="p1 w'+chooserSelected3+' defaultNH">...</button></td><td class="p-9 w'+chooserSelected3+'"></td>';
+              }
+              else{
+                content+='<td><button class="p1 w'+chooserSelected3+' defaultNH">'+top.getText('statesCfg.json','[off]')+'</button></td><td><button class="p1 w'+chooserSelected3+' defaultNH">...</button></td>';
+              }
+            }
+          }
+          content+='</tr></table>';
+          document.getElementById("buttonType"+i).innerHTML=content;
+        }
+        else{
+          document.getElementById("buttonType"+i).innerHTML='<button class="p'+buttonTypes[i][0]+' w'+chooserSelected2+' defaultNH">Text</button>';
+        }
+      }
+      else{
+        document.getElementById("buttonType"+i).innerHTML='';
+      }
+    }
+  }
+}
+
+function selectChooser1(typeid){
+  if(chooserSelected1!=typeid){
+    chooserSelected1=typeid;
+    printChooser1(typeid+','+chooserSelected2+','+chooserSelected3);
+  }
+  else{
+    chooserSelected1=typeid;
+    for (var i=0; i<buttonTypes.length; i++){
+      if (buttonTypes[i][0]==chooserSelected1){
+        $(document.getElementById("chooser"+i)).addClass("green");
+        $(document.getElementById("chooser"+i)).removeClass("default");
+        printbuttonTypeExample(i);
+      }
+      else{
+        $(document.getElementById("chooser"+i)).addClass("default");
+        $(document.getElementById("chooser"+i)).removeClass("green");
+      }
+    }
+  }
+}
+
+function BChooseOK1(id){
+  document.getElementById(id).value=chooserSelected1+","+chooserSelected2+","+chooserSelected3;
+  buttonWizard=true;
+  TINY.box.hide();
+  //openText1(choosenMode+':'+id.split(":")[1]+":4");
+}
+
+//---------------------------BChooseEnd-------------------------------//
+//--------------------------ActionerStart-----------------------------//
+var printActions=[];
+
+function printActioner(id){
+  document.getElementById("boxTitle").innerHTML=top.getText("devframe",tableHeadArray[choosenMode][id.split(":")[2]][0])+":";
+  boxHeadlines=["ID","Name","Data Type","Presetted value","Use value"];
+  var data=document.getElementById(id).value;
+  var tempLine=id.split(":")[1];
+  var temp=document.getElementById(choosenMode+':'+tempLine+":7").value;
+  if (temp.length>0 && temp.substr(0,1)=="["){
+    printActions=JSON.parse(temp);
+  }
+  else{
+    printActions=[];
+  }
+  printData={};
+  if (printActions.length!=0){
+    if (data.substr(0,1)=="{"){
+      var printData1=JSON.parse(data);
+      for (var i=0; i<printActions.length; i++){
+        if (typeof printData1[printActions[i][0]]=="undefined"){
+          printData[printActions[i][0]]={};
+        }
+        else{
+          printData[printActions[i][0]]=printData1[printActions[i][0]];
+        }
+      }
+    }
+    else{
+      for (var i=0; i<printActions.length; i++){
+        printData[printActions[i][0]]={};
+      }
+    }
+    printActioner2(0);
+  }
+  textFildOpen=true;
+}
+
+var selectedAction=0;
+
+function printActioner2(i2){
+  selectedAction=i2;
+  var content='<table class="rightBorder" cellpadding="0" cellspacing="3"><tr><td><button class="defaultNH p2 w2">'+top.getText('devframe','targetAction')+':</button></td></tr>';
+  for (var i=0; i<printActions.length; i++){
+    content+='<tr><td><button class="p1 w2 ';
+    if (i==i2){
+      content+='green">';
+    }
+    else{
+      content+='default" onClick="saveAndChangeAction('+i+');">';
+    }
+    content+=printActions[i][1]+'</button></td></tr>';
+  }
+  content+='</table>';
+  document.getElementById("actionChooserContent").innerHTML=content;
+  if (printActions.length>0){
+    if(printActions[selectedAction][2]==""){
+      printScope=["[all]"];
+    }
+    else{
+      printScope=printActions[selectedAction][2].split(",");
+    }
+    for (var i=printScope.length-1; i>=0; i--){
+      if (printScope[i]=="" || allDataArray["statesCfg.json"][statesIDArray[printScope[i]]][3]==1 && printScope[i]!="[none]" && printScope[i]!="[numbers]" && printScope[i]!="[all]"){
+        printScope.splice(i,1);
+      }
+    }
+  }
+  for (var i=0; i<printScope.length; i++){
+    if (typeof printData[printActions[selectedAction][0]][printScope[i]]=="undefined"){
+      printData[printActions[selectedAction][0]][printScope[i]]=[];
+      //var tempArr=[];
+      //for (var j=0; j<boxHeadlines.length; j++){
+      //  tempArr.push("");
+      //}
+      //printData[printActions[selectedAction][0]][printScope[i]].push(tempArr);
+    }
+  }
+  var tempArr=Object.keys(printData[printActions[selectedAction][0]]);
+  for (var j=tempArr.length-1; j>=0; j--){
+    if (printScope.indexOf(tempArr[j])==-1){
+      console.log(tempArr[j]);
+      delete printData[printActions[selectedAction][0]][tempArr[j]];
+    }
+  }
+  print2(0);
+}
+
+function printActionerLine(i2){
+  if (typeof printData[printActions[selectedAction][0]][printScope[i2]]=="undefined"){
+    var tempArr=[];
+    //for (var j=0; j<boxHeadlines.length; j++){
+    //  tempArr.push("");
+    //}
+    try{
+      printData[printActions[selectedAction][0]][printScope[i]].push(tempArr);
+    }
+    catch(e){
+      document.getElementById("editorContent").innerHTML="";
+      return;
+    }
+  }
+  var content='<table border="0" cellpadding="0" cellspacing="3">';
+  content+='<td></td>';
+  for (var i=0; i<boxHeadlines.length; i++){
+    content+='<td class="transparent0NH special2 text">'+boxHeadlines[i]+'</td>';
+  }
+  content+='<td></td>';
+  for (var i=0; i<printData[printActions[selectedAction][0]][printScope[i2]].length; i++){
+    content+='<tr id="Bine'+i+'"><td id="Bp.'+i+'.0" class="move transparent0 p1 w1"><img src="/img/drag2.png" /></td>';
+    for (var j=0; j<boxHeadlines.length; j++){
+      if (typeof printData[printActions[selectedAction][0]][printScope[i2]][i][j]=="undefined"){
+        printData[printActions[selectedAction][0]][printScope[i2]][i][j]="";
+      }
+      if (boxHeadlines[j]=="ID" || boxHeadlines[j]=="Value Settings"){
+        content+='<td><input class="w2" id="Bp.'+i+'.'+(j+1)+'" value="'+printData[printActions[selectedAction][0]][printScope[i2]][i][j]+'" /></td>';
+      }
+      else if(boxHeadlines[j]=="Use value"){
+        var dataTypes=[["0","<--"],["1","1"],["2","2"],["3","3"],["4","4"]];
+        var tempValue=printData[printActions[selectedAction][0]][printScope[i2]][i][j]||"0";
+        content+='<td><select class="default p1" id="Bp.'+i+'.'+(j+1)+'">';
+        for (var y=0; y<dataTypes.length; y++){
+          if (dataTypes[y][0]==tempValue){
+            content+='<option value="'+dataTypes[y][0]+'" selected="selected">'+dataTypes[y][1]+'</option>';
+          }
+          else{
+            content+='<option value="'+dataTypes[y][0]+'">'+dataTypes[y][1]+'</option>';
+          }
+        }
+        content+='</select></td>';
+      }
+      else if(boxHeadlines[j]=="Data Type"){
+        var dataTypes=[["str","Text"],["pwd","Password"],["num","Number"],["checkbox","Checkbox"]];
+        content+='<td><select class="default p1" id="Bp.'+i+'.'+(j+1)+'">';
+        for (var y=0; y<dataTypes.length; y++){
+          if (dataTypes[y][0]==printData[printActions[selectedAction][0]][printScope[i2]][i][j]){
+            content+='<option value="'+dataTypes[y][0]+'" selected="selected">'+dataTypes[y][1]+'</option>';
+          }
+          else{
+            content+='<option value="'+dataTypes[y][0]+'">'+dataTypes[y][1]+'</option>';
+          }
+        }
+        content+='</select></td>';
+      }
+      else{
+        content+='<td><input class="w4" id="Bp.'+i+'.'+(j+1)+'" value="'+printData[printActions[selectedAction][0]][printScope[i2]][i][j]+'" /></td>';
+      }
+    }
+    content+='<td class="p1 w1 text default Hred" onClick="printActionerRemoveLine('+i2+','+i+');">-</td></tr>';
+  }
+  content+='<tr><td class="p1 w1 text default Hgreen" onClick="printActionerAddLine('+i2+');" colspan="'+(boxHeadlines.length+2)+'">+</td></tr></table>';
+  document.getElementById("editorContent").innerHTML=content;
+  applyTouchHandler("editorContent");
+}
+
+function printActionerChanche(i){
+  actionerReadOut(commanderSelected);
+  printActionerLine(i);
+}
+
+function printActionerAddLine(i){
+  actionerReadOut(commanderSelected);
+  var tempArr=[];
+  for (var j=0; j<boxHeadlines.length; j++){
+    tempArr.push("");
+  }
+  printData[printActions[selectedAction][0]][printScope[i]].push(tempArr);
+  printActionerLine(i);
+}
+
+function printActionerRemoveLine(i,j){
+  actionerReadOut(commanderSelected);
+  printData[printActions[selectedAction][0]][printScope[i]].splice(j,1);
+  //if (printData[printActions[selectedAction][0]][printScope[i]].length==0){
+  //  printActionerAddLine(i);
+  //}
+  printActionerLine(i);
+}
+
+function actionerReadOut(i2){
+  if (typeof printScope[i2]!="undefined"){
+    for (var i=0; i<printData[printActions[selectedAction][0]][printScope[i2]].length; i++){
+      printData[printActions[selectedAction][0]][printScope[i2]][i]=[];
+      for (var j=0; j<boxHeadlines.length; j++){
+        printData[printActions[selectedAction][0]][printScope[i2]][i].push(document.getElementById('Bp.'+i+'.'+(j+1)).value);
+      }
+    }
+  }
+}
+
+function actionerOK(id){
+  actionerReadOut(commanderSelected);
+  document.getElementById(id).value=JSON.stringify(printData);
+  TINY.box.hide();
+}
+
+function saveAndChangeAction(i){
+  actionerReadOut(commanderSelected);
+  printActioner2(i);
+}
+//---------------------------ActionerEnd-------------------------------//
+//-------------------------ActionDynamicStart---------------------------//
+var printActionData;
+var actionDynamicReadOut;
+
+function printActionDynamic(id,readOutFunction){
+  document.getElementById("boxTitle").innerHTML=top.getText("devframe",tableHeadArray[choosenMode][id.split(":")[2]][0])+":";
+  var data=document.getElementById(id).value;
+  actionDynamicReadOut=readOutFunction;
+  var tempLine=id.split(":")[1];
+  var temp=document.getElementById(choosenMode+':'+tempLine+":7").value;
+  if (temp.length>0 && temp.substr(0,1)=="["){
+    printActions=JSON.parse(temp);
+  }
+  else{
+    printActions=[];
+  }
+  printActionData={};
+  tabParameters={};
+  selectedTabPerTab={};
+  if (printActions.length!=0){
+    if (data.substr(0,1)=="{"){
+      var printData1=JSON.parse(data);
+      for (var i=0; i<printActions.length; i++){
+        if (typeof printData1[printActions[i][0]]=="undefined"){
+          printActionData[printActions[i][0]]={};
+        }
+        else{
+          printActionData[printActions[i][0]]=printData1[printActions[i][0]];
+        }
+      }
+    }
+    else{
+      for (var i=0; i<printActions.length; i++){
+        printActionData[printActions[i][0]]={};
+      }
+    }
+    printActionDynamic2(0);
+  }
+  textFildOpen=true;
+}
+
+function printActionDynamic2(i2){
+  selectedAction=i2;
+  var content='<table class="rightBorder" cellpadding="0" cellspacing="3"><tr><td><button class="defaultNH p2 w2">'+top.getText('devframe','targetAction')+':</button></td></tr>';
+  for (var i=0; i<printActions.length; i++){
+    content+='<tr><td><button class="p1 w2 ';
+    if (i==i2){
+      content+='green">';
+    }
+    else{
+      content+='default" onClick="saveAndChangeActionDynamic('+i+');">';
+    }
+    content+=printActions[i][1]+'</button></td></tr>';
+  }
+  content+='</table>';
+  document.getElementById("actionChooserContent").innerHTML=content;
+  if (printActions.length>0){
+    if(printActions[selectedAction][2]!=""){
+      printScope=printActions[selectedAction][2].split(",");
+      for (var i=printScope.length-1; i>=0; i--){
+        if (printScope[i]=="" || allDataArray["statesCfg.json"][statesIDArray[printScope[i]]][3]==1 && printScope[i]!="[none]" && printScope[i]!="[numbers]" && printScope[i]!="[all]"){
+          printScope.splice(i,1);
+        }
+      }
+    }
+    else{
+      printScope=["[all]"];
+    }
+    if (lineType=="eventer"){
+      if (printScope.indexOf("[value]")==-1){
+        printScope.push("[value]");
+      }
+      if (printScope.indexOf("[error]")==-1){
+        printScope.push("[error]");
+      }
+    }
+  }
+  for (var i=0; i<printScope.length; i++){
+    tabParameters[printScope[i]]={};
+    selectedTabPerTab[printScope[i]]={};
+    if (typeof printActionData[printActions[selectedAction][0]][printScope[i]]=="undefined"){
+      if (lineType=="eventer"){
+        printActionData[printActions[selectedAction][0]][printScope[i]]=[["","",""]];
+      }
+      else{
+        printActionData[printActions[selectedAction][0]][printScope[i]]={};
+      }
+    }
+    else{
+      if (lineType=="buttonParameter"){
+        for (var y=0; y<parameterData.length; y++){
+          if (parameterData[y][1]=="tab"){
+            tabParameters[printScope[i]][parameterData[y][0]]=printActionData[printActions[selectedAction][0]][printScope[i]][parameterData[y][0]];
+          }
+        }
+      }
+    }
+  }
+  var tempArr=Object.keys(printActionData[printActions[selectedAction][0]]);
+  for (var j=tempArr.length-1; j>=0; j--){
+    if (printScope.indexOf(tempArr[j])==-1){
+      delete printActionData[printActions[selectedAction][0]][tempArr[j]];
+    }
+  }
+  printData=printActionData[printActions[selectedAction][0]];
+  print2(0);
+}
+
+
+function actionDynamicReadOut(i2){
+  actionDynamicReadOut(i2);
+  printActionData[printActions[selectedAction][0]]=printData;
+}
+
+function actionDynamicOK(id){
+  actionDynamicReadOut(commanderSelected);
+  document.getElementById(id).value=JSON.stringify(printActionData);
+  TINY.box.hide();
+}
+
+function saveAndChangeActionDynamic(i){
+  actionDynamicReadOut(commanderSelected);
+  printActionDynamic2(i);
+}
+
+//--------------------------ActionDynamicEnd----------------------------//
+//---------------------------CommanderStart---------------------------//
+
+var printData;
+var printData2={};
+var printScope;
+var commanderSelected=0;
+var printTargetMode;
+var printTarget;
+
+function printCommander(id){
+  document.getElementById("boxTitle").innerHTML=top.getText("devframe",tableHeadArray[choosenMode][id.split(":")[2]][0])+":";
+  var data=document.getElementById(id).value;
+  var tempLine=id.split(":")[1];
+  var temp=document.getElementById(choosenMode+':'+tempLine+":4").value;
+  printTarget=document.getElementById(choosenMode+':'+tempLine+":1").value;
+  printTargetMode=document.getElementById(choosenMode+':'+tempLine+":2").value;
+  if (temp.length>0 && temp.substr(0,1)=="["){
+    printScope=temp.split(",");
+    for (var i=printScope.length-1; i>=0; i--){
+      if (printScope[i]=="" || allDataArray["statesCfg.json"][statesIDArray[printScope[i]]][3]==1 && allDataArray["statesCfg.json"][statesIDArray[printScope[i]]][0]!="[none]"){
+        printScope.splice(i,1);
+      }
+    }
+  }
+  else{
+    printScope=[];
+  }
+  printData={};
+  if (printScope.length!=0){
+    if (data.substr(0,1)=="{"){
+      var printData1=JSON.parse(data);
+      for (var i=0; i<printScope.length; i++){
+        if (typeof printData1[printScope[i]]=="undefined"){
+          //printData[printScope[i]]=[""];
+          printData[printScope[i]]=fillButtonWithDefault(id,printScope[i]);
+        }
+        else{
+          printData[printScope[i]]=printData1[printScope[i]];
+        }
+      }
+      if (printTarget=="macro" && printTargetMode=="copy"){
+        if (typeof printData1["buttonID"]=="undefined"){
+          printData["buttonID"]="";
+        }
+        else{
+          printData["buttonID"]=printData1["buttonID"];
+        }
+      }
+    }
+    else{
+      for (var i=0; i<printScope.length; i++){
+        //printData[printScope[i]]=[""];
+        printData[printScope[i]]=fillButtonWithDefault(id,printScope[i]);
+      }
+    }
+    if (printTarget=="macro" && printTargetMode=="copy"){
+      printCommanderLineCopy();
+    }
+    print2(0);
+  }
+  textFildOpen=true;
+}
+
+var parameterToRead=false;
+
+function printCommanderLine(i){
+  if (typeof printData[printScope[i]]=="undefined"){
+    printData[printScope[i]]=[""];
+  }
+  var content='<table border="0" cellpadding="0" cellspacing="3" align="right">';
+  var colspa="2";
+  var tempButtonData;
+  var valuesToPrint=[];
+  if(printTarget=="macro"){
+    tempButtonData=createAllButtons();
+    if (printTargetMode=="copy"){
+      colspa="0";
+      var tempData=printData["buttonID"];
+      if (tempData==""){
+        tempData=document.getElementById("selector.buttonID").value;
+      }
+      var tempScopeArr=[];
+      for (var y=0; y<tempButtonData[1].length; y++){
+        if (tempButtonData[1][y][0]==tempData){
+          tempScopeArr=tempButtonData[1][y][4];
+          break;
+        }
+      }
+      content+='<tr><td class="transparent0NH special2 text">'+top.getText('devframe','targetButtonState')+':</td></tr>';
+      for (var j=0; j<printData[printScope[i]].length; j++){
+        content+='<tr><td><select class="default left p1 w8" id="selector'+i+'.'+j+'.0">';
+        for (var q=0; q<tempScopeArr.length; q++){
+          if (tempScopeArr[q]!="" && (allDataArray["statesCfg.json"][statesIDArray[tempScopeArr[q]]][3]==0 || allDataArray["statesCfg.json"][statesIDArray[tempScopeArr[q]]][0]=="[none]")){
+            var tempValue = top.getText('statesCfg.json',tempScopeArr[q]);
+            if (tempValue.substring(0,1)=="<"){
+              tempValue=tempScopeArr[q];
+            }
+            if (tempScopeArr[q]==printData[printScope[i]][j]){
+              content+='<option value="'+tempScopeArr[q]+'" selected="selected">'+tempValue+'</option>';
+            }
+            else{
+              content+='<option value="'+tempScopeArr[q]+'">'+tempValue+'</option>';
+            }
+          }
+        }
+        content+='</select></td>';
+      }
+    }
+    else{
+      colspa="4";
+      var macroButtonIDs=[["[wait]",top.getText('timerMode',0)]].concat(tempButtonData[0]);
+      content+='<tr><td class="transparent0NH special2 text">Move</td><td class="transparent0NH special2 text">'+top.getText('devframe','targetButton')+' /<br>'+top.getText('timerMode',0)+'</td><td class="transparent0NH special2 text">'+top.getText('devframe','targetState')+' /<br>'+top.getText('timeFormat',0)+'</td><td class="transparent0NH special2 text Cred">'+top.getText('delete',1)+'</td></tr>';
+      for (var j=0; j<printData[printScope[i]].length; j++){
+        content+='<tr id="Cine'+j+'"><td id="Cp.'+j+'.0" class="move transparent0 p1 w1"><img src="/img/drag2.png" /></td><td><select onChange="printCommanderChanche('+i+');" class="default left p1 w4" id="selector'+i+'.'+j+'.0">';
+        for (var q=0; q<macroButtonIDs.length; q++){
+          if (macroButtonIDs[q][0]==printData[printScope[i]][j][0]){
+            content+='<option value="'+macroButtonIDs[q][0]+'" selected="selected">'+macroButtonIDs[q][1]+'</option>';
+          }
+          else{
+            content+='<option value="'+macroButtonIDs[q][0]+'">'+macroButtonIDs[q][1]+'</option>';
+          }
+        }
+        content+='</select></td>';
+        if (typeof printData[printScope[i]][j][1]=="undefined"){
+          printData[printScope[i]][j]=["[wait]",""];
+        } 
+        if (printData[printScope[i]][j][0]=="[wait]"){
+          content+='<td><input class="w2" id="selector'+i+'.'+j+'.1" value="'+printData[printScope[i]][j][1]+'" /></td>';
+        }
+        else{
+          content+='<td><select class="default left p1 w2" id="selector'+i+'.'+j+'.1">';
+          var tempScopeArr=[];
+          var tempData=printData[printScope[i]][j][0];
+          for (var y=0; y<tempButtonData[1].length; y++){
+            if (tempButtonData[1][y][0]==tempData){
+              tempScopeArr=tempButtonData[1][y][4];
+              break;
+            }
+          }
+          for (var q=0; q<tempScopeArr.length; q++){
+            if (tempScopeArr[q]!="" && (allDataArray["statesCfg.json"][statesIDArray[tempScopeArr[q]]][3]==0 || allDataArray["statesCfg.json"][statesIDArray[tempScopeArr[q]]][0]=="[none]")){
+              var tempValue = top.getText('statesCfg.json',tempScopeArr[q]);
+              if (tempValue.substring(0,1)=="<"){
+                tempValue=tempScopeArr[q];
+              }
+              if (tempScopeArr[q]==printData[printScope[i]][j][1]){
+                content+='<option value="'+tempScopeArr[q]+'" selected="selected">'+tempValue+'</option>';
+              }
+              else{
+                content+='<option value="'+tempScopeArr[q]+'">'+tempValue+'</option>';
+              }
+            }
+          }
+          content+='</select></td>';
+        }
+        content+='<td class="p1 w1 text default Hred" onClick="printCommanderRemoveLine('+i+','+j+');">-</td></tr>';
+      }
+    }
+  }
+  else{
+    if (printTarget!="-" && typeof buttonThingsIDArrayModes[printTarget]=="undefined"){
+      parameterData=allDataArray["extensionsCfg.json"][extensionsIDArray[printTarget]][8];
+    }
+    else{
+      try{
+        parameterData=buttonThingsIDArrayModes[printTarget][8];
+      }
+      catch(e){
+        parameterData="";
+      }
+    }
+    var targetState=printScope[i];
+    if (parameterData!=""){
+      try{
+        parameterData=JSON.parse(parameterData);
+      }
+      catch(e){
+        parameterData=[];
+      }
+      if (typeof parameterData[printTargetMode]!="undefined" && typeof parameterData[printTargetMode][targetState]=="undefined" && typeof parameterData[printTargetMode]["[numbers]"]!="undefined" && numbersString.split(",").indexOf(targetState)!=-1){
+        targetState="[numbers]";
+      }
+      else if (typeof parameterData[printTargetMode]!="undefined" && typeof parameterData[printTargetMode][targetState]=="undefined" && typeof parameterData[printTargetMode]["[all]"]!="undefined"){
+        targetState="[all]";
+      }
+    }
+    else{
+      parameterData=[];
+    }
+    colspa="0";
+    if (typeof parameterData[printTargetMode]=="undefined" || typeof parameterData[printTargetMode][targetState]=="undefined" || parameterData[printTargetMode][targetState].length==0){
+      content+=top.getText("devframeMessages","noCommandsAllowed");
+      parameterToRead=false;
+    }
+    else{
+      parameterData=parameterData[printTargetMode][targetState];
+      parameterToRead=true;
+      content+='<td class="transparent0NH special2 text">'+top.getText("setting",0)+'</td><td class="transparent0NH special2 text">'+top.getText("value",0)+'</td><td class="transparent0NH special2 text">Use value</td>';
+      var selectedDict=printData[printScope[i]];
+      for (var i2=0; i2<parameterData.length; i2++){
+        content+='<tr id="Bine'+i2+'"><td id="Bp.'+i2+'.0" class="p1 w3 transparent0NH text" value="'+parameterData[i2][0]+'">'+parameterData[i2][1]+'</td>';
+        var tempVal="";
+        var tempVal2=0;
+        var tempSettings=parameterData[i2][3].split(",");
+        if (typeof selectedDict[parameterData[i2][0]]!= "undefined" && typeof selectedDict[parameterData[i2][0]][0]!= "undefined" && (selectedDict[parameterData[i2][0]][0]!==tempVal || selectedDict[parameterData[i2][0]][1]!==tempVal2)){
+          tempVal=selectedDict[parameterData[i2][0]][0];
+          tempVal2=selectedDict[parameterData[i2][0]][1];
+        }
+        else{
+          if (parameterData[i2][2]=="num"){
+            tempVal=tempSettings[0];
+          }
+          else{
+            tempVal=parameterData[i2][3];
+          }
+          tempVal2=parseInt(parameterData[i2][4],10);
+        }
+        if (parameterData[i2][2]=="checkbox"){
+          if (tempVal==1){
+            content+='<td class="transparent0NH" align="center"><input class="checkbox" type="checkbox" id="Bp.'+i2+'.1" checked="checked" /></td>';
+          }
+          else{
+            content+='<td class="transparent0NH" align="center"><input class="checkbox" type="checkbox" id="Bp.'+i2+'.1" /></td>';
+          }
+        }
+        else{
+          if (parameterData[i2][2]=="num"){
+            content+='<td><input type="number" class="w4" id="Bp.'+i2+'.1" ';
+            if (tempSettings.length>1 && tempSettings[1]!=""){
+              content+='min="'+tempSettings[1]+'" ';
+            }
+            if (tempSettings.length>2 && tempSettings[2]!=""){
+              content+='max="'+tempSettings[2]+'" ';
+            }
+            if (tempSettings.length>3 && tempSettings[3]!=""){
+              content+='step="'+tempSettings[3]+'" ';
+            }
+            content+='/></td>';
+          }
+          else if(parameterData[i2][2]=="pwd"){
+            content+='<td><input type="password" class="w4" id="Bp.'+i2+'.1" /></td>';
+          }
+          else{  
+            content+='<td><input type="text" class="w4" id="Bp.'+i2+'.1" /></td>';
+          }
+          valuesToPrint.push(["Bp."+i2+".1",tempVal]);
+        }
+        var dataTypes=[[0,"<--"],[1,"1"],[2,"2"],[3,"3"],[4,"4"]];
+        content+='<td><select class="default p1" id="Bp.'+i2+'.2">';
+        for (var y=0; y<dataTypes.length; y++){
+          if (dataTypes[y][0]==tempVal2){
+            content+='<option value="'+dataTypes[y][0]+'" selected="selected">'+dataTypes[y][1]+'</option>';
+          }
+          else{
+            content+='<option value="'+dataTypes[y][0]+'">'+dataTypes[y][1]+'</option>';
+          }
+        }
+        content+='</select></td>';
+        content+='</tr>';
+      }
+    }
+  }
+  if (colspa!="0"){
+    content+='<tr><td class="p1 w1 text default Hgreen" onClick="printCommanderAddLine('+i+');" colspan="'+colspa+'">+</td>';
+  }
+  content+='</tr></table>';
+  document.getElementById("contentLine").innerHTML=content;
+  for (var y=0; y<valuesToPrint.length; y++){
+    document.getElementById(valuesToPrint[y][0]).value = valuesToPrint[y][1];
+  }
+  if (colspa!="0"){
+    applyTouchHandler("contentLine");
+  }
+}
+
+function printCommanderLineCopy(){
+  if (typeof printData["buttonID"]=="undefined"){
+    printData["buttonID"]="";
+  }
+  var content='<table border="0" cellpadding="0" cellspacing="3" align="right">';
+  var tempButtonData=createAllButtons();
+  var macroButtonIDs=tempButtonData[0];
+  content+='<tr><td class="transparent0NH special2 text">'+top.getText('devframe','targetButton')+':</td></tr><tr><td><select onChange="printCommanderChanche(commanderSelected);" class="default left p1 w8" id="selector.buttonID">';
+  for (var q=0; q<macroButtonIDs.length; q++){
+    if (macroButtonIDs[q][0]==printData["buttonID"]){
+      content+='<option value="'+macroButtonIDs[q][0]+'" selected="selected">'+macroButtonIDs[q][1]+'</option>';
+    }
+    else{
+      content+='<option value="'+macroButtonIDs[q][0]+'">'+macroButtonIDs[q][1]+'</option>';
+    }
+  }
+  content+='</select></td></tr></table>';
+  document.getElementById("contentLine0").innerHTML=content;
+}
+
+function printCommanderChanche(i){
+  commanderReadOut(commanderSelected);
+  printCommanderLine(i);
+}
+
+function printCommanderAddLine(i){
+  commanderReadOut(commanderSelected);
+  printData[printScope[i]].push("");
+  printCommanderLine(i);
+}
+
+function printCommanderRemoveLine(i,j){
+  commanderReadOut(commanderSelected);
+  printData[printScope[i]].splice(j,1);
+  if (printData[printScope[i]].length==0){
+    printData[printScope[i]].push("");
+  }
+  printCommanderLine(i);
+}
+
+function commanderReadOut(i){
+  if (typeof printScope[i]!="undefined"){
+    if (printType!="macro"){
+      var tempData={};
+      var isEmpty=true;
+      if (parameterToRead){
+        for (var i2=0; i2<parameterData.length; i2++){
+          tempData[parameterData[i2][0]]=[];
+          if (parameterData[i2][2]=="checkbox"){
+            if (document.getElementById('Bp.'+i2+'.1').checked){
+              tempData[parameterData[i2][0]].push(1);
+            }
+            else{
+              tempData[parameterData[i2][0]].push(0);
+            }
+            isEmpty=false;
+          }
+          else if (parameterData[i2][2]=="num"){
+            tempData[parameterData[i2][0]].push(parseFloat(document.getElementById('Bp.'+i2+'.1').value,10));
+            isEmpty=false;
+          }
+          else{
+            tempData[parameterData[i2][0]].push(document.getElementById('Bp.'+i2+'.1').value);
+            if (tempData[parameterData[i2][0]][0]!=""){
+              isEmpty=false;
+            }
+          }
+          tempData[parameterData[i2][0]].push(parseInt(document.getElementById('Bp.'+i2+'.2').value,10));
+          if (tempData[parameterData[i2][0]][1]!=0){
+            isEmpty=false;
+          }
+        }
+      }
+      if (isEmpty){
+        printData[printScope[i]]="";
+        printData2[printScope[i]]="";
+      }
+      else{
+        tempData=JSON.stringify(tempData);
+        printData[printScope[i]]=JSON.parse(tempData);
+        printData2[printScope[i]]=JSON.parse(tempData);
+      }
+    }
+    else{
+      var tempLen=printData[printScope[i]].length
+      printData[printScope[i]]=[];
+      printData2[printScope[i]]=[];
+      for (var j=0; j<tempLen; j++){
+        if (printTargetMode=="copy"){
+          printData[printScope[i]].push(document.getElementById("selector"+i+"."+j+".0").value);
+          printData2[printScope[i]].push(document.getElementById("selector"+i+"."+j+".0").value);
+        }
+        else{
+          printData[printScope[i]].push([document.getElementById("selector"+i+"."+j+".0").value,document.getElementById("selector"+i+"."+j+".1").value]);
+          printData2[printScope[i]].push([document.getElementById("selector"+i+"."+j+".0").value,document.getElementById("selector"+i+"."+j+".1").value]);
+        }
+      }
+      if (printData[printScope[i]].length==0){
+        printData[printScope[i]]="";
+        printData2[printScope[i]]="";
+      }
+    }
+  }
+  if (printType=="macro" && printTargetMode=="copy"){
+    printData["buttonID"]=document.getElementById("selector.buttonID").value;
+  }
+}
+
+function commanderOK(id){
+  var shouldSave=false;
+  commanderReadOut(commanderSelected);
+  for (var i=0; i<printScope.length; i++){
+    if(printData[printScope[i]]!=""){
+      shouldSave=true;
+      break;
+    }
+  }
+  if (shouldSave){
+    document.getElementById(id).value=JSON.stringify(printData);
+  }
+  else{
+    document.getElementById(id).value="";
+  }
+  TINY.box.hide();
+}
+
+function commanderTest(){
+  commanderReadOut(commanderSelected);//command,targetState,data,shadow,target,targetMode,lable,method
+  var tempData={};
+  for (item in printData[printScope[commanderSelected]]){
+    tempData[item]=printData[printScope[commanderSelected]][item][0];
+  }
+  omega.TriggerEvent({command:"",targetState:printScope[commanderSelected],data:tempData,shadow:2,target:printTarget,targetMode:printTargetMode});//targetMode is for jsCommand to work 
+}
+//---------------------------CommanderEnd---------------------------//
+
+var lineType;
+
+function print2(i2){
+  commanderSelected=i2;
+  var content='<table class="rightBorder" cellpadding="0" cellspacing="3"><tr><td><button class="defaultNH p2 w2">'+top.getText('devframe','targetState')+':</button></td></tr>';
+  for (var i=0; i<printScope.length; i++){
+    content+='<tr><td><button class="p1 w2 ';
+    if (i==i2){
+      content+='green">';
+    }
+    else{
+      content+='default" onClick="saveAndChange('+i+');">';
+    }
+    content+=top.getText('statesCfg.json',printScope[i])+'</button></td></tr>';
+  }
+  content+='</table>';
+  document.getElementById("chooserContent").innerHTML=content;
+  if (lineType=="commander"){
+    printCommanderLine(i2);
+  }
+  else if (lineType=="eventer"){
+    printEventerLine(i2);
+  }
+  else if (lineType=="buttonParameter"){
+    printButtonParameterLine(i2);
+  }
+  else if (lineType=="actioner"){
+    printActionerLine(i2);
+  }
+}
+
+function saveAndChange(i){
+  if (lineType=="commander"){
+    commanderReadOut(commanderSelected);
+  }
+  else if(lineType=="eventer"){
+    eventerReadOut(commanderSelected);
+  }
+  else if(lineType=="buttonParameter"){
+    buttonParameterReadOut(commanderSelected);
+  }
+  else if (lineType=="actioner"){
+    actionerReadOut(commanderSelected);
+  }
+  print2(i);
+}
+
+function changeSelectedTextField(id){
+  lastSelectedTextField=document.getElementById(id);
+}
+
+//-----------------------------------EventerStart---------------------------------------//
+function printEventer(id){
+  document.getElementById("boxTitle").innerHTML=top.getText("devframe",tableHeadArray[choosenMode][id.split(":")[2]][0])+":";
+  var data=document.getElementById(id).value;
+  if (choosenMode=="extensionsCfg.json"){
+    printScope=["[on]","[off]"];
+  }
+  else{
+    var temp=document.getElementById(choosenMode+':'+id.split(":")[1]+":4").value;
+    if (temp.length>0 && temp.substr(0,1)=="["){
+      printScope=temp.split(",");
+    }
+    else{
+      printScope=[];
+    } 
+  }
+  if (choosenMode!="extensionsCfg.json" && printScope.indexOf("[value]")==-1){
+    printScope.push("[value]");
+  }
+  if (printScope.indexOf("[error]")==-1){
+    printScope.push("[error]");
+  }
+  printData={};
+  try{
+    var printData1=JSON.parse(document.getElementById(id).value);
+    for (var i=0; i<printScope.length; i++){
+      if (typeof printData1[printScope[i]]=="undefined" && choosenMode!="extensionsCfg.json"){
+        //printData[printScope[i]]=[["","",""]];
+        printData[printScope[i]]=fillButtonWithDefault(id,printScope[i]);
+      }
+      else{
+        printData[printScope[i]]=printData1[printScope[i]];
+      }
+    }
+  }
+  catch(e){
+    for (var i=0; i<printScope.length; i++){
+      if (choosenMode!="extensionsCfg.json"){
+        //printData[printScope[i]]=[["","",""]];
+        printData[printScope[i]]=fillButtonWithDefault(id,printScope[i]);
+      }
+      else{
+        printData[printScope[i]]=[["","",""]];
+      }
+    }
+  }
+  print2(0);
+  textFildOpen=true;
+}
+
+function printEventerLine(i){
+  if (typeof printData[printScope[i]]=="undefined"){
+    printData[printScope[i]]=[["","",""]];
+  }
+  var content='<table border="0" cellpadding="0" cellspacing="3"><td class="transparent0NH special2 text">Move</td><td class="transparent0NH special2 text">'+top.getText("event",0)+' (prefix.suffix)</td><td class="transparent0NH special2 text">'+top.getText("event",0)+' (payload)</td><td class="transparent0NH special2 text Cred">'+top.getText('delete',1)+'</td>';
+  for (var j=0; j<printData[printScope[i]].length; j++){
+    content+='<tr id="Cine'+j+'"><td id="Cp.'+j+'.0" class="move transparent0 p1 w1"><img src="/img/drag2.png" /></td><td><textarea id="textArea'+i+'.'+j+'.1" onClick="changeSelectedTextField(this.id); insertEvent1(this,false);" border="0" class="w4">'+printData[printScope[i]][j][0]+'</textarea></td><td><textarea id="textArea'+i+'.'+j+'.2" onClick="changeSelectedTextField(this.id); insertEvent1(this,false);" border="0" class="w4">'+printData[printScope[i]][j][1]+'</textarea></td><td class="p1 w1 text default Hred" onClick="printEventerRemoveLine('+i+','+j+');">-</td></tr>';
+    if (j!=printData[printScope[i]].length-1){
+      if (typeof printData[printScope[i]][j][2]=="undefined" || printData[printScope[i]][j][2]=="OR" || printData[printScope[i]][j][2]==""){
+        content+='<tr><td colspan="4"><input class="special2" type="radio" name="andor'+i+'.'+j+'" checked />'+top.getText('or',0).toUpperCase()+'&nbsp;&nbsp;&nbsp;<input class="special2" type="radio" name="andor'+i+'.'+j+'" />'+top.getText('and',0).toUpperCase()+'&nbsp;&nbsp;&nbsp;<input class="special2" type="radio" name="andor'+i+'.'+j+'" />'+top.getText('and',0).toUpperCase()+'&nbsp;'+top.getText('not',0).toUpperCase()+'&nbsp;&nbsp;&nbsp;<input class="special2" type="radio" name="andor'+i+'.'+j+'" />'+top.getText('then',0).toUpperCase()+'</td></tr>';
+      }
+      else if (printData[printScope[i]][j][2]=="AND"){
+        content+='<tr><td colspan="4"><input class="special2" type="radio" name="andor'+i+'.'+j+'" />'+top.getText('or',0).toUpperCase()+'&nbsp;&nbsp;&nbsp;<input class="special2" type="radio" name="andor'+i+'.'+j+'" checked />'+top.getText('and',0).toUpperCase()+'&nbsp;&nbsp;&nbsp;<input class="special2" type="radio" name="andor'+i+'.'+j+'" />'+top.getText('and',0).toUpperCase()+'&nbsp;'+top.getText('not',0).toUpperCase()+'&nbsp;&nbsp;&nbsp;<input class="special2" type="radio" name="andor'+i+'.'+j+'" />'+top.getText('then',0).toUpperCase()+'</td></tr>';
+      }
+      else if (printData[printScope[i]][j][2]=="ANDNOT"){
+        content+='<tr><td colspan="4"><input class="special2" type="radio" name="andor'+i+'.'+j+'" />'+top.getText('or',0).toUpperCase()+'&nbsp;&nbsp;&nbsp;<input class="special2" type="radio" name="andor'+i+'.'+j+'" />'+top.getText('and',0).toUpperCase()+'&nbsp;&nbsp;&nbsp;<input class="special2" type="radio" name="andor'+i+'.'+j+'" checked />'+top.getText('and',0).toUpperCase()+'&nbsp;'+top.getText('not',0).toUpperCase()+'&nbsp;&nbsp;&nbsp;<input class="special2" type="radio" name="andor'+i+'.'+j+'" />'+top.getText('then',0).toUpperCase()+'</td></tr>';
+      }
+      else{
+        content+='<tr><td colspan="4"><input class="special2" type="radio" name="andor'+i+'.'+j+'" />'+top.getText('or',0).toUpperCase()+'&nbsp;&nbsp;&nbsp;<input class="special2" type="radio" name="andor'+i+'.'+j+'" />'+top.getText('and',0).toUpperCase()+'&nbsp;&nbsp;&nbsp;<input class="special2" type="radio" name="andor'+i+'.'+j+'" />'+top.getText('and',0).toUpperCase()+'&nbsp;'+top.getText('not',0).toUpperCase()+'&nbsp;&nbsp;&nbsp;<input class="special2" type="radio" name="andor'+i+'.'+j+'" checked />'+top.getText('then',0).toUpperCase()+'</td></tr>';
+      }
+    }
+  }
+  content+='<tr><td class="p1 w1 text default Hgreen" onClick="printEventerAddLine('+i+');" colspan="4">+</td></tr></table>';
+  document.getElementById("contentLine").innerHTML=content;
+  applyTouchHandler("contentLine");
+}
+
+function printEventerAddLine(i){
+  eventerReadOut(commanderSelected);
+  printData[printScope[i]].push(["","",""]);
+  printEventerLine(i);
+}
+
+function printEventerRemoveLine(i,j){
+  eventerReadOut(commanderSelected);
+  printData[printScope[i]].splice(j,1);
+  if (printData[printScope[i]].length==0){
+    printData[printScope[i]].push(["","",""]);
+  }
+  printEventerLine(i);
+}
+
+function eventerReadOut(i){
+  var tempLen=printData[printScope[i]].length;
+  printData[printScope[i]]=[];
+  printData2[printScope[i]]=[];
+  for (var j=0; j<tempLen; j++){
+    if (j==tempLen-1){
+      printData[printScope[i]].push([document.getElementById("textArea"+i+"."+j+".1").value,document.getElementById("textArea"+i+"."+j+".2").value,""]);
+      printData2[printScope[i]].push([document.getElementById("textArea"+i+"."+j+".1").value,document.getElementById("textArea"+i+"."+j+".2").value,""]);
+    }
+    else{
+      andor="OR";
+      if (document.getElementsByName("andor"+i+"."+j)[1].checked){
+        andor="AND";
+      }
+      else if (document.getElementsByName("andor"+i+"."+j)[2].checked){
+        andor="ANDNOT";
+      }
+      else if (document.getElementsByName("andor"+i+"."+j)[3].checked){
+        andor="THEN";
+      }
+      printData[printScope[i]].push([document.getElementById("textArea"+i+"."+j+".1").value,document.getElementById("textArea"+i+"."+j+".2").value,andor]);
+      printData2[printScope[i]].push([document.getElementById("textArea"+i+"."+j+".1").value,document.getElementById("textArea"+i+"."+j+".2").value,andor]);
+    }
+  }
+}
+
+function eventerOK(id){
+  var shouldSave=false;
+  eventerReadOut(commanderSelected);
+  for (var i=0; i<printScope.length; i++){
+    for (var j=0; j<printData[printScope[i]].length; j++){
+      if (printData[printScope[i]][j][0]!="" || printData[printScope[i]][j][1]!=""){
+        shouldSave=true;
+        break;
+      }
+    }
+  }
+  if (shouldSave){
+    document.getElementById(id).value=JSON.stringify(printData);
+  }
+  else{
+    document.getElementById(id).value="";
+  }
+  TINY.box.hide();
+}
+//------------------------------------EventerEnd---------------------------------------//
+//-----------------------------------IDButtonStart--------------------------------------//
+function BIDOK(id){
+  if (document.getElementById("idid").value!=""){
+    var tempKey=choosenMode+"names";
+    if (choosenMode=="buttons"){
+      tempKey=choosenModeOld+allDataArray[choosenModeOld][selectedButtonsFieldId.split(":")[1]][0]+"names"
+    }
+    if (typeof dict[tempKey]!="undefined"){
+      if (typeof dict[tempKey][document.getElementById(id).value]!="undefined"){
+        dict[tempKey][document.getElementById(id).value]=null;
+        delete dict[tempKey][document.getElementById(id).value];
+      }
+    }
+    else{
+      dict[tempKey]={};
+    }
+    dict[tempKey][document.getElementById("idid").value]=top.replaceuml(document.getElementById("idName").value);
+    document.getElementById(id).value=document.getElementById("idid").value;
+    document.getElementById(id).innerHTML=document.getElementById("idName").value+'<br />(<font style="color:red">'+document.getElementById("idid").value+'</font>)';
+    //omega.update("reload");//???
+    omega.update("reload");
+  }
+  TINY.box.hide();
+}
+//------------------------------------IDButtonEnd---------------------------------------//
+//---------------------------------DynamicIDEditorStart----------------------------------//
+var boxHeadlines;
+function initiateDynamicIDEditor(id,headlines){
+  document.getElementById("boxTitle").innerHTML=top.getText("devframe",tableHeadArray[choosenMode][id.split(":")[2]][0])+":";
+  var data=document.getElementById(id).value;
+  boxHeadlines=headlines;
+  chooserSelectedArray = [];
+  try{
+    chooserSelectedArray = JSON.parse(data);
+  }
+  catch(e){
+    chooserSelectedArray = [];
+  }
+  if (typeof chooserSelectedArray!="object" || !$.isArray(chooserSelectedArray)){
+    chooserSelectedArray = [];
+  }
+  printDynamicIDEditor();
+  textFildOpen=true;
+}
+
+function printDynamicIDEditor(){
+  var content='<table border="0" cellpadding="0" cellspacing="3">';
+  if (chooserSelectedArray.length>0){
+    content+='<td></td>';
+    for (var i=0; i<boxHeadlines.length; i++){
+      content+='<td class="transparent0NH special2 text">'+boxHeadlines[i]+'</td>';
+    }
+    content+='<td></td>';
+  }
+  for (var i=0; i<chooserSelectedArray.length; i++){
+    content+='<tr id="Bine'+i+'"><td id="Bp.'+i+'.0" class="move transparent0 p1 w1"><img src="/img/drag2.png" /></td>';
+    for (var j=0; j<boxHeadlines.length; j++){
+      if (typeof chooserSelectedArray[i][j]=="undefined"){
+        chooserSelectedArray[i][j]="";
+      }
+      if (boxHeadlines[j]=="ID" || boxHeadlines[j]=="Value Settings"){
+        content+='<td><input class="w2" id="Bp.'+i+'.'+(j+1)+'" /></td>';
+      }
+      else if(boxHeadlines[j]=="Data Type"){
+        var dataTypes=[["str","Text"],["pwd","Password"],["num","Number"],["checkbox","Checkbox"]];
+        content+='<td><select class="default p1" id="Bp.'+i+'.'+(j+1)+'">';
+        for (var y=0; y<dataTypes.length; y++){
+          if (dataTypes[y][0]==chooserSelectedArray[i][j]){
+            content+='<option value="'+dataTypes[y][0]+'" selected="selected">'+dataTypes[y][1]+'</option>';
+          }
+          else{
+            content+='<option value="'+dataTypes[y][0]+'">'+dataTypes[y][1]+'</option>';
+          }
+        }
+        content+='</select></td>';
+      }
+      /*else if(boxHeadlines[j]=="Button Types"){
+        var dataTypes=[["1","Signle state"],["0","Multi state"],["X","Both"]];
+        content+='<td><select class="default p1" id="Bp.'+i+'.'+(j+1)+'">';
+        for (var y=0; y<dataTypes.length; y++){
+          if (dataTypes[y][0]==chooserSelectedArray[i][j]){
+            content+='<option value="'+dataTypes[y][0]+'" selected="selected">'+dataTypes[y][1]+'</option>';
+          }
+          else{
+            content+='<option value="'+dataTypes[y][0]+'">'+dataTypes[y][1]+'</option>';
+          }
+        }
+        content+='</select></td>';
+      }
+      else if(boxHeadlines[j]=="Value Mode"){
+        var dataTypes=[["","None"],["str","Text"],["num","Number"],["sld","Slider"],["rgb","Color"],["dim","Dimmer"]];
+        content+='<td><select class="default p1" id="Bp.'+i+'.'+(j+1)+'">';
+        for (var y=0; y<dataTypes.length; y++){
+          if (dataTypes[y][0]==chooserSelectedArray[i][j]){
+            content+='<option value="'+dataTypes[y][0]+'" selected="selected">'+dataTypes[y][1]+'</option>';
+          }
+          else{
+            content+='<option value="'+dataTypes[y][0]+'">'+dataTypes[y][1]+'</option>';
+          }
+        }
+        content+='</select></td>';
+      }*/
+      else if(boxHeadlines[j]=="Required"){
+        if (chooserSelectedArray[i][j]==1){
+          content+='<td class="transparent0NH" align="center"><input class="checkbox" type="checkbox" id="Bp.'+i+'.'+(j+1)+'" checked="checked" /></td>';
+        }
+        else{
+          content+='<td class="transparent0NH" align="center"><input class="checkbox" type="checkbox" id="Bp.'+i+'.'+(j+1)+'" /></td>';
+        }
+      }
+      else if(boxHeadlines[j]=="Command" || boxHeadlines[j]=="Description"){
+        content+='<td><input class="w8 left" id="Bp.'+i+'.'+(j+1)+'" /></td>';
+      }
+      else{
+        content+='<td><input class="w4" id="Bp.'+i+'.'+(j+1)+'" /></td>';
+      }
+    }
+    content+='<td class="p1 w1 text default Hred" onClick="removeDynamicID('+i+');">-</td></tr>';
+  }
+  content+='<tr><td class="p1 w1 text default Hgreen" onClick="addDynamicID();" colspan="'+(boxHeadlines.length+2)+'">+</td></tr></table>';
+  document.getElementById("editorContent").innerHTML=content;
+  for (var i=0; i<chooserSelectedArray.length; i++){
+    for (var j=0; j<boxHeadlines.length; j++){
+      if (boxHeadlines[j]!="Required" && boxHeadlines[j]!="Value Mode" && boxHeadlines[j]!="Button Types" && boxHeadlines[j]!="Data Type"){
+        document.getElementById('Bp.'+i+'.'+(j+1)).value=chooserSelectedArray[i][j];
+      }
+    }
+  }
+  applyTouchHandler("editorContent");
+}
+
+function addDynamicID(){
+  dynamicIDEditorReadOut();
+  var tempArr=[];
+  for (var i=0; i<boxHeadlines.length; i++){
+    tempArr.push("");
+  }
+  chooserSelectedArray.push(tempArr);
+  printDynamicIDEditor();
+}
+
+function removeDynamicID(i){
+  dynamicIDEditorReadOut();
+  chooserSelectedArray.splice(i,1);
+  printDynamicIDEditor();
+}
+
+function dynamicIDEditorReadOut(){
+  for (var i=0; i<chooserSelectedArray.length; i++){
+    chooserSelectedArray[i]=[];
+    for (var j=0; j<boxHeadlines.length; j++){
+      if(boxHeadlines[j]=="Required"){
+        var tempVal=0;
+        if (document.getElementById('Bp.'+i+'.'+(j+1)).checked){
+          tempVal=1;
+        }
+        chooserSelectedArray[i].push(tempVal);
+      }
+      else{
+        chooserSelectedArray[i].push(document.getElementById('Bp.'+i+'.'+(j+1)).value);
+      }
+    }
+  }
+}
+
+function dynamicIDEditorOK(id){
+  dynamicIDEditorReadOut();
+  if (chooserSelectedArray.length==0){
+    document.getElementById(id).value="";
+  }
+  else{
+    document.getElementById(id).value=JSON.stringify(chooserSelectedArray);
+  }
+  TINY.box.hide();
+}
+//---------------------------------DynamicIDEditorEnd---------------------------------//
+//--------------------------------ParameterEditorStart--------------------------------//
+var selectedDict;
+var parameterData;
+
+function initiateParameterEditor(id,target,parameterData2){
+  document.getElementById("boxTitle").innerHTML=top.getText("devframe",tableHeadArray[choosenMode][id.split(":")[2]][0])+":";
+  var idData=id.split(":");
+  var data=document.getElementById(id).value;
+  selectedDict = {};
+  try{
+    selectedDict = JSON.parse(data);
+  }
+  catch(e){
+    selectedDict = {};
+  }
+  if (typeof selectedDict!="object" || $.isArray(selectedDict)){
+    selectedDict = {};
+  }
+  if (!parameterData2){
+    parameterData = allDataArray["extensionsCfg.json"][extensionsIDArray[document.getElementById(idData[0]+":"+idData[1]+":"+target).value]][5];
+    if (parameterData.length==0 ){
+      document.getElementById("editorContent").innerHTML=top.getText("devframeMessages","noParameter");
+    }
+    else{
+      parameterData=JSON.parse(parameterData);
+      printParameterEditor();
+    }
+  }
+  else{
+    parameterData = parameterData2;
+    printParameterEditor();
+  }
+  textFildOpen=true;
+}
+
+function printParameterEditor(){
+  var content='<table border="0" cellpadding="0" cellspacing="3"><tr><td class="transparent0NH special2 text">'+top.getText("setting",0)+'</td><td class="transparent0NH special2 text">'+top.getText("value",0)+'</td></tr>';
+  for (var i=0; i<parameterData.length; i++){
+    content+='<tr id="Bine'+i+'"><td id="Bp.'+i+'.0" class="p1 w3 transparent0NH text" value="'+parameterData[i][0]+'">'+parameterData[i][1]+'</td>';
+    var tempVal="";
+    var tempSettings=parameterData[i][3].split(",");
+    if (typeof selectedDict[parameterData[i][0]]!= "undefined" && selectedDict[parameterData[i][0]]!==""){
+      tempVal =selectedDict[parameterData[i][0]];
+    }
+    else{
+      if (parameterData[i][2]=="num"){
+        tempVal=tempSettings[0];
+      }
+      else{
+        tempVal=parameterData[i][3];
+      }
+    }
+    if (parameterData[i][2]=="checkbox"){
+      if (tempVal==1){
+        content+='<td class="transparent0NH" align="center"><input class="checkbox" type="checkbox" id="Bp.'+i+'.1" checked="checked" /></td>';
+      }
+      else{
+        content+='<td class="transparent0NH" align="center"><input class="checkbox" type="checkbox" id="Bp.'+i+'.1" /></td>';
+      }
+    }
+    else if (parameterData[i][2]=="num"){
+      content+='<td><input type="number" class="w4" id="Bp.'+i+'.1" value="'+tempVal+'" ';
+      if (tempSettings.length>1 && tempSettings[1]!=""){
+        content+='min="'+tempSettings[1]+'" ';
+      }
+      if (tempSettings.length>2 && tempSettings[2]!=""){
+        content+='max="'+tempSettings[2]+'" ';
+      }
+      if (tempSettings.length>3 && tempSettings[3]!=""){
+        content+='step="'+tempSettings[3]+'" ';
+      }
+      content+='/></td>';
+    }
+    else if(parameterData[i][2]=="pwd"){
+      content+='<td><input type="password" class="w4" id="Bp.'+i+'.1" value="'+tempVal+'" /></td>';
+    }
+    else if(parameterData[i][0]=="buttonIDSelector"){
+      var tempButtonData=createAllButtons();
+      var macroButtonIDs=[];
+      for (var y=0; y<tempButtonData[1].length; y++){
+        if (tempButtonData[1][y][4].indexOf("[on]")!=-1 && tempButtonData[1][y][4].indexOf("[off]")!=-1){
+          for (var j=0; j<tempButtonData[0].length; j++){
+            if (tempButtonData[0][j][0]==tempButtonData[1][y][0]){
+                macroButtonIDs.push(tempButtonData[0][j]);
+                break;
+            }
+          }
+        }
+      }
+      content+='<td><select class="default left p1 w4" id="Bp.'+i+'.1">';
+      for (var q=0; q<macroButtonIDs.length; q++){
+        if (macroButtonIDs[q][0]==tempVal){
+          content+='<option value="'+macroButtonIDs[q][0]+'" selected="selected">'+macroButtonIDs[q][1]+'</option>';
+        }
+        else{
+          content+='<option value="'+macroButtonIDs[q][0]+'">'+macroButtonIDs[q][1]+'</option>';
+        }
+      }
+      content+='</select></td>';
+    }
+    else{  
+      content+='<td><input type="text" class="w4" id="Bp.'+i+'.1" value="'+tempVal+'"';
+      if (parameterData[i][0]=="displayName"){
+        content+=' onkeydown="printReturn(event);"';
+      }
+      content+=' /></td>';
+    }
+    content+='</tr>';
+  }
+  content+='</table>';
+  document.getElementById("editorContent").innerHTML=content;
+}
+
+function parameterEditorOK(id){
+  var tempData={};
+  var isEmpty=true;
+  for (var i=0; i<parameterData.length; i++){
+    if (parameterData[i][2]=="checkbox"){
+      if (document.getElementById('Bp.'+i+'.1').checked){
+        tempData[parameterData[i][0]]=1;
+      }
+      else{
+        tempData[parameterData[i][0]]=0;
+      }
+      isEmpty=false;
+    }
+    else if (parameterData[i][2]=="num"){
+      tempData[parameterData[i][0]]=parseFloat(document.getElementById('Bp.'+i+'.1').value);
+      isEmpty=false;
+    }
+    else{
+      tempData[parameterData[i][0]]=document.getElementById('Bp.'+i+'.1').value;
+      if (tempData[parameterData[i][0]]!=""){
+        isEmpty=false;
+      }
+    }
+  }
+  if (isEmpty){
+    tempData="";
+  }
+  else{
+    tempData=JSON.stringify(tempData);
+  }
+  document.getElementById(id).value=tempData;
+  TINY.box.hide();
+}
+//--------------------------------ParameterEditorEnd----------------------------------//
+//--------------------------------ParameterEditorButtonsStart--------------------------------//
+var tabParameters={};
+var selectedTabPerTab={};
+
+function initiateParameterEditorButtons(id){
+  document.getElementById("boxTitle").innerHTML=top.getText("devframe",tableHeadArray[choosenMode][id.split(":")[2]][0])+":";
+  var data=document.getElementById(id).value;
+  var temp=document.getElementById(choosenMode+':'+id.split(":")[1]+":4").value;
+  if (temp.length>0 && temp.substr(0,1)=="["){
+    printScope=temp.split(",");
+    for (var i=printScope.length-1; i>=0; i--){
+      if (printScope[i]=="" || allDataArray["statesCfg.json"][statesIDArray[printScope[i]]][3]==1){
+        printScope.splice(i,1);
+      }
+    }
+    parameterData=buttonParameterData;
+  }
+  else{
+    printScope=["[?]"];
+    parameterData=[["cssClasses","str",""]];//id,type,defaultValue (sysDictionary:("buttonParameter",id))
+  }
+  printData={};
+  tabParameters={};
+  selectedTabPerTab={};
+  try{
+    var printData1=JSON.parse(document.getElementById(id).value);
+    for (var i=0; i<printScope.length; i++){
+      printData[printScope[i]]={};
+      tabParameters[printScope[i]]={};
+      selectedTabPerTab[printScope[i]]={};
+      if (typeof printData1[printScope[i]]!="undefined"){
+        for (var y=0; y<parameterData.length; y++){
+          if (typeof printData1[printScope[i]][parameterData[y][0]]!="undefined"){
+            if (parameterData[y][1]=="tab"){
+              tabParameters[printScope[i]][parameterData[y][0]]=printData1[printScope[i]][parameterData[y][0]];
+            }
+            printData[printScope[i]][parameterData[y][0]]=printData1[printScope[i]][parameterData[y][0]];
+          }
+        }
+      }
+      else{
+        printData[printScope[i]]=fillButtonWithDefault(id,printScope[i]);
+        for (var y=0; y<parameterData.length; y++){
+          if (parameterData[y][1]=="tab"){
+            tabParameters[printScope[i]][parameterData[y][0]]=printData[printScope[i]][parameterData[y][0]];
+          }
+        }
+      }
+    }
+  }
+  catch(e){
+    for (var i=0; i<printScope.length; i++){
+      //printData[printScope[i]]={};
+      //for (var y=0; y<parameterData.length; y++){
+      //  printData[printScope[i]][parameterData[y][0]]=parameterData[y][2];
+      //}
+      tabParameters[printScope[i]]={};
+      selectedTabPerTab[printScope[i]]={};
+      printData[printScope[i]]=fillButtonWithDefault(id,printScope[i]);
+      for (var y=0; y<parameterData.length; y++){
+        if (parameterData[y][1]=="tab"){
+          tabParameters[printScope[i]][parameterData[y][0]]=printData[printScope[i]][parameterData[y][0]];
+        }
+      }
+    }
+  }
+  print2(0);
+  textFildOpen=true;
+}
+
+function printButtonParameterLine(i){
+  var content='<table border="0" cellpadding="0" cellspacing="3"><tr><td class="transparent0NH special2 text">'+top.getText("name",0)+'</td><td class="transparent0NH special2 text">'+top.getText("value",0)+'</td></tr>';
+  for (var y=0; y<parameterData.length; y++){
+    if (parameterData[y][1]=="tab"){
+      content+='<tr id="Bine'+y+'"><td id="Bp.'+y+'.0" class="p1 w3 transparent0NH text">'+top.getText("buttonParameter",parameterData[y][0])+'</td><td id="Bp.'+y+'.1"><table border="0" cellpadding="0" cellspacing="0" class="stdtable"><tr>';
+      var tempThisTabName=parameterData[y][0];
+      if (typeof selectedTabPerTab[printScope[i]][tempThisTabName]=="undefined"){
+        selectedTabPerTab[printScope[i]][tempThisTabName]=0;
+      }
+      var tempSelectedTab=selectedTabPerTab[printScope[i]][tempThisTabName];
+      if (typeof tabParameters[printScope[i]][tempThisTabName]=="undefined"){
+        tabParameters[printScope[i]][tempThisTabName]=[];
+      }
+      for (var j=0; j<parameterData[y][2].length; j++){
+        if (typeof tabParameters[printScope[i]][tempThisTabName][j]=="undefined"){
+          tabParameters[printScope[i]][tempThisTabName][j]={};
+        }
+        for (var k=0; k<parameterData[y][2][j].length; k++){
+          var thisParameterName=parameterData[y][2][j][k][0];
+          if (typeof tabParameters[printScope[i]][tempThisTabName][j][thisParameterName]=="undefined"){
+            tabParameters[printScope[i]][tempThisTabName][j][thisParameterName]=parameterData[y][2][j][k][2];
+          }
+        }
+        if (j==0){
+          content+='<td class="bottom cutTop cutLeft">';
+        }
+        else{
+          content+='<td class="bottom cutTop">';
+        }
+        if (tempSelectedTab==j){
+          content+='<button class="p1 w1 green">'+(j+1)+'</button>';
+        }
+        else{
+          content+='<button class="p1 w1 default" onClick="changeTab('+i+','+y+','+j+');">'+(j+1)+'</button>';
+        }
+        content+='</td>';
+      }
+      content+='</tr></table></td></tr>';
+      for (var k=0; k<parameterData[y][2][tempSelectedTab].length; k++){
+        var thisParameterName=parameterData[y][2][tempSelectedTab][k][0];
+        content+='<tr id="Bine'+y+'"><td id="Bp.'+y+'.0" class="p1 w3 transparent0NH text">'+top.getText("buttonParameter",thisParameterName)+'</td>';
+        var tempSettings=[];
+        try {
+          tempSettings=parameterData[y][2][tempSelectedTab][k][3];
+        }
+        catch(e){
+          tempSettings=[];
+        }
+        var tempVal=tabParameters[printScope[i]][tempThisTabName][tempSelectedTab][thisParameterName];
+        content+=resolveOneParameters(parameterData[y][2][tempSelectedTab][k],y+'.'+k,tempVal,tempSettings,i);
+        content+='</tr>';
+      }
+    }
+    else{
+      content+='<tr id="Bine'+y+'"><td id="Bp.'+y+'.0" class="p1 w3 transparent0NH text">'+top.getText("buttonParameter",parameterData[y][0])+'</td>';
+      if (typeof printData[printScope[i]][parameterData[y][0]]=="undefined"){
+        printData[printScope[i]][parameterData[y][0]]=parameterData[y][2];
+      }
+      var tempSettings=[];
+      try {
+        tempSettings=parameterData[y][3];
+      }
+      catch(e){
+        tempSettings=[];
+      }
+      var tempVal=printData[printScope[i]][parameterData[y][0]];
+      content+=resolveOneParameters(parameterData[y],y,tempVal,tempSettings,i);
+      content+='</tr>';
+    }
+  }
+  content+='</table>';
+  document.getElementById("contentLine").innerHTML=content;
+}
+
+function changeTab(i,y,j){
+  buttonParameterReadOut(i);
+  var tempThisTabName=parameterData[y][0];
+  selectedTabPerTab[printScope[i]][tempThisTabName]=j;
+  printButtonParameterLine(i);
+}
+
+function resolveOneParameters(data,y,tempVal,tempSettings,i){
+  var content="";
+  if (data[1]=="checkbox"){
+    if (tempVal===1){
+      content+='<td class="transparent0NH" align="center"><input class="checkbox" type="checkbox" id="Bp.'+y+'.1" checked="checked" /></td>';
+    }
+    else{
+      content+='<td class="transparent0NH" align="center"><input class="checkbox" type="checkbox" id="Bp.'+y+'.1" /></td>';
+    }
+  }
+  else if (data[1]=="num"){
+    content+='<td><input type="number" class="w4" id="Bp.'+y+'.1" value="'+tempVal+'" ';
+    if (tempSettings.length>1 && tempSettings[1]!=""){
+      content+='min="'+tempSettings[1]+'" ';
+    }
+    if (tempSettings.length>2 && tempSettings[2]!=""){
+      content+='max="'+tempSettings[2]+'" ';
+    }
+    if (tempSettings.length>3 && tempSettings[3]!=""){
+      content+='step="'+tempSettings[3]+'" ';
+    }
+    content+='/></td>';
+  }
+  else if(data[1]=="pwd"){
+    content+='<td><input type="password" class="w4" id="Bp.'+y+'.1" value="'+tempVal+'" /></td>';
+  }
+  else if(data[1]=="dropdown"){
+    content+='<td><select class="default p1 w4 left" id="Bp.'+y+'.1">';
+    for (var q=0; q<tempSettings.length; q++){
+      if (printScope[i]=="[value]" || (tempSettings[q]!="dim" && tempSettings[q]!="rgb")){
+        if (tempSettings[q]==tempVal){
+          content+='<option value="'+tempSettings[q]+'" selected="selected">'+top.getText("buttonParameter",tempSettings[q])+'</option>';
+        }
+        else{
+          content+='<option value="'+tempSettings[q]+'">'+top.getText("buttonParameter",tempSettings[q])+'</option>';
+        }
+      }
+    }
+    content+='</select></td>';
+  }
+  else{  
+    content+='<td><input type="text" class="w4" id="Bp.'+y+'.1" value="'+tempVal+'" /></td>';
+  }
+  return content;
+}
+
+function buttonParameterReadOut(i){
+  printData[printScope[i]]={};
+  for (var j=0; j<parameterData.length; j++){
+    if (parameterData[j][1]=="checkbox"){
+      if (document.getElementById('Bp.'+j+'.1').checked){
+        printData[printScope[i]][parameterData[j][0]]=1;
+      }
+      else{
+        printData[printScope[i]][parameterData[j][0]]=0;
+      }
+    }
+    else if (parameterData[j][1]=="num"){
+      printData[printScope[i]][parameterData[j][0]]=parseFloat(document.getElementById('Bp.'+j+'.1').value);
+    }
+    else if (parameterData[j][1]=="tab"){
+      var tempThisTabName=parameterData[j][0];
+      var tempSelectedTab=selectedTabPerTab[printScope[i]][tempThisTabName];
+      tabParameters[printScope[i]][tempThisTabName][tempSelectedTab]={};
+      for (var k=0; k<parameterData[j][2][tempSelectedTab].length; k++){
+        var thisParameterName=parameterData[j][2][tempSelectedTab][k][0];
+        var thisParameterType=parameterData[j][2][tempSelectedTab][k][1];
+        if (thisParameterType=="checkbox"){
+          if (document.getElementById('Bp.'+j+'.'+k+'.1').checked){
+            tabParameters[printScope[i]][tempThisTabName][tempSelectedTab][thisParameterName]=1;
+          }
+          else{
+            tabParameters[printScope[i]][tempThisTabName][tempSelectedTab][thisParameterName]=0;
+          }
+        }
+        else if (thisParameterType=="num"){
+          tabParameters[printScope[i]][tempThisTabName][tempSelectedTab][thisParameterName]=parseFloat(document.getElementById('Bp.'+j+'.'+k+'.1').value);
+        }
+        else{
+          tabParameters[printScope[i]][tempThisTabName][tempSelectedTab][thisParameterName]=top.replaceuml(document.getElementById('Bp.'+j+'.'+k+'.1').value);//Test replaceuml!!
+        }
+      }
+      printData[printScope[i]][parameterData[j][0]]=tabParameters[printScope[i]][tempThisTabName];
+    }
+    else{
+      printData[printScope[i]][parameterData[j][0]]=top.replaceuml(document.getElementById('Bp.'+j+'.1').value);//Test replaceuml!!
+    }
+  }
+}
+
+function buttonParameterOK(id){
+  var shouldSave=false;
+  buttonParameterReadOut(commanderSelected);
+  var tempData=printData;
+  var tempData1={};
+  for (var i=0; i<printScope.length; i++){
+    tempData1[printScope[i]]={};
+    if (typeof tempData[printScope[i]]=="undefined"){
+      tempData[printScope[i]]={};
+    }
+    for (var y=0; y<parameterData.length; y++){
+      if (parameterData[y][1]=="tab"){
+        var tempThisTabName=parameterData[y][0];
+        tempData1[printScope[i]][tempThisTabName]=[];
+        for (var j=0; j<parameterData[y][2].length; j++){
+          tempData1[printScope[i]][tempThisTabName].push({});
+          for (var k=0; k<parameterData[y][2][j].length; k++){
+            var thisParameterName=parameterData[y][2][j][k][0];
+            tempData1[printScope[i]][tempThisTabName][j][thisParameterName]=parameterData[y][2][j][k][2];
+          }
+        }
+        if (typeof tempData[printScope[i]][tempThisTabName]=="undefined"){
+          tempData[printScope[i]][tempThisTabName]=[];
+          for (var j=0; j<parameterData[y][2].length; j++){
+            tempData[printScope[i]][tempThisTabName].push({});
+            for (var k=0; k<parameterData[y][2][j].length; k++){
+              var thisParameterName=parameterData[y][2][j][k][0];
+              tempData[printScope[i]][tempThisTabName][j][thisParameterName]=parameterData[y][2][j][k][2];
+            }
+          }
+        }
+      }
+      else{
+        tempData1[printScope[i]][parameterData[y][0]]=parameterData[y][2];
+        if (typeof tempData[printScope[i]][parameterData[y][0]]=="undefined"){
+          tempData[printScope[i]][parameterData[y][0]]=parameterData[y][2];
+        }
+      }
+    }
+  }
+  tempData=JSON.stringify(tempData);
+  if (tempData=="{}" || JSON.stringify(tempData1)==tempData){
+    tempData="";
+  }
+  document.getElementById(id).value=tempData;
+  TINY.box.hide();
+}
+//--------------------------------ParameterEditorButtonsEnd----------------------------------//
+//--------------------------------FillButtonWithDefaultStart---------------------------------//
+function fillButtonWithDefault(id,targetState){
+  var idData=id.split(":");
+  var id1=idData[0]+":"+idData[1];
+  if (idData[2]=="1" || idData[2]=="2"){
+    document.getElementById(id1+":3").value="";
+    document.getElementById(id1+":4").value="";
+    document.getElementById(id1+":5").value="";
+    document.getElementById(id1+":6").value="";
+    document.getElementById(id1+":7").value="";
+  }
+  else if (idData[2]=="4"){
+    if (document.getElementById(id).value==""){
+      document.getElementById(id1+":5").value="";
+      document.getElementById(id1+":6").value="";
+      document.getElementById(id1+":7").value="";
+    }
+  }
+  else if (idData[2]=="5" || idData[2]=="6" || idData[2]=="7"){
+    var typeData;
+    var tempTypeField=(parseInt(idData[2])+3);
+    var target=document.getElementById(id1+":1").value;
+    var targetAction=document.getElementById(id1+":2").value;
+    if (target!="-" && typeof buttonThingsIDArrayModes[target]=="undefined"){
+      typeData=allDataArray["extensionsCfg.json"][extensionsIDArray[target]][tempTypeField];
+    }
+    else{
+      try{
+        typeData=buttonThingsIDArrayModes[target][tempTypeField];
+      }
+      catch(e){
+        typeData="";
+      }
+    }
+    try{
+      typeData=JSON.parse(typeData);
+    }
+    catch(e){
+      typeData={};
+    }
+    if (idData[2]=="5"){      
+      var temp8Value=false;
+      var temp2={};
+      var temp=getActionButtonData(targetAction,targetState,typeData);
+      if (temp){
+        for (var y=0; y<temp.length; y++){
+          var tempVal="";
+          var tempSettings=temp[y][3].split(",");
+          if (temp[y][2]=="num"){
+            tempVal=tempSettings[0];
+          }
+          else{
+            tempVal=temp[y][3];
+          }
+          var tempVal2=parseInt(temp[y][4]);
+          if (tempVal!=""){
+            temp8Value=true;
+          }
+          temp2[temp[y][0]]=[tempVal,tempVal2];
+        }
+      }
+      if (temp8Value){
+        return temp2;
+      }
+      else{
+        return [[""]];
+      }
+    }
+    else if (idData[2]=="6"){
+      return getActionButtonData(targetAction,targetState,typeData)||[["","",""]];
+    }
+    else if (idData[2]=="7"){
+      return getActionButtonData(targetAction,targetState,typeData)||{};
+    }
+  }
+}
+
+function getActionButtonData(targetAction,targetState,data){
+  if(typeof data[targetAction]!="undefined"){
+    if(typeof data[targetAction][targetState]!="undefined"){
+      return data[targetAction][targetState];
+    }
+    else if (numbersString.split(",").indexOf(targetState)!=-1 && typeof data[targetAction]["[numbers]"]!="undefined"){
+      return data[targetAction]["[numbers]"];
+    }
+    else if (typeof data[targetAction]["[all]"]!="undefined"){
+      return data[targetAction]["[all]"];
+    }
+  }
+  return;
+}
+//--------------------------------FillButtonWithDefaultEnd--------------------------------//
+//----------------------------------PluginsChooseStart---------------------------------//
+var listChooserSelectedArray = [];
+var listChooserOptionsDict = {};
+
+function printListChooser(chooserOptionsArray,id){
+  document.getElementById("boxTitle").innerHTML=top.getText("devframe",tableHeadArray[choosenMode][id.split(":")[2]][0])+":";
+  var selection = document.getElementById(id).value;
+  listChooserOptionsDict = {};
+  if ($.isArray(chooserOptionsArray[0])){
+    tempChooserOptionsArray=[];
+    for (var i=0; i<chooserOptionsArray.length; i++){
+      listChooserOptionsDict[chooserOptionsArray[i][0]]=dict[chooserOptionsArray[i][1]][chooserOptionsArray[i][0]];
+      tempChooserOptionsArray.push(chooserOptionsArray[i][0]);
+    }
+    chooserOptionsArray=tempChooserOptionsArray;
+  }
+  else{
+    for (var i=0; i<chooserOptionsArray.length; i++){
+      listChooserOptionsDict[chooserOptionsArray[i]]=chooserOptionsArray[i];
+    }
+  }
+  var tempchooserSelectedArray = selection.split(",");
+  listChooserSelectedArray = [];
+  for (var i=0; i<tempchooserSelectedArray.length; i++){
+    if (tempchooserSelectedArray[i]!="" && tempchooserSelectedArray[i]!="-"){
+      if (chooserOptionsArray.indexOf(tempchooserSelectedArray[i])==-1){
+        chooserOptionsArray.push(tempchooserSelectedArray[i]);
+      }
+      listChooserSelectedArray.push(tempchooserSelectedArray[i]);
+    }
+  }
+  //chooserOptionsArray=chooserOptionsArray.sort();
+  var content='<table border="0" cellpadding="0" cellspacing="3">';
+  for (var i=0; i<chooserOptionsArray.length ;i++){
+    var curval=chooserOptionsArray[i];
+    if (curval!="-"){
+      if (listChooserSelectedArray.indexOf(curval)!=-1){
+        content+='<tr><td id="PChoose'+curval+'B"><button class="p1 w4 green" onClick="PChooseunselect(\''+curval+'\')">'+listChooserOptionsDict[curval]+'</button></td></tr>';
+      }
+      else{
+        content+='<tr><td id="PChoose'+curval+'B"><button class="p1 w4 default" onClick="PChooseselect(\''+curval+'\')">'+listChooserOptionsDict[curval]+'</button></td></tr>';
+      }
+    }
+  }
+  content+='</table>';
+  document.getElementById("PChooser").innerHTML=content;
+  textFildOpen=true;
+}
+
+function PChooseselect(st){
+  if (listChooserSelectedArray.indexOf(st)==-1){
+    listChooserSelectedArray.push(st);
+  }
+  document.getElementById("PChoose"+st+"B").innerHTML='<button class="p1 w4 green" onClick="PChooseunselect(\''+st+'\')">'+listChooserOptionsDict[st]+'</button>';
+}
+
+function PChooseunselect(st){
+  var nr = listChooserSelectedArray.indexOf(st);
+  if (nr!=-1){
+    listChooserSelectedArray.splice(nr,1);
+  }
+  document.getElementById("PChoose"+st+"B").innerHTML='<button class="p1 w4 default" onClick="PChooseselect(\''+st+'\')">'+listChooserOptionsDict[st]+'</button>';
+}
+
+function PChooseOK(id){
+  document.getElementById(id).value=listChooserSelectedArray.toString();
+  TINY.box.hide();
+}
+
+//------------------------------PluginsChooserEnd------------------------------//
+var printType;
+
+function openText(targetid){
+  if(omega.MultiTriggerCheck({id:targetid})==2){
+    openText1(targetid);
+  }
+}
+
+function openText1(id){
+  if(textFildOpen==false){
+    $(document.getElementById(id)).addClass("blinking");
+    var content;
+    var idData=id.split(":");
+    if (idData[0]==choosenMode+"ddd" || idData[0]==choosenMode+"dddshort"){
+      stdTextBox(id,true);
+    }
+    else if (tableHeadArray[choosenMode][idData[2]][1]=="id" && idData[1].indexOf("/")==-1){
+      var tempName=document.getElementById(id).value;
+      var tempKey=choosenMode+"names";
+      if (choosenMode=="buttons"){
+        tempKey=choosenModeOld+allDataArray[choosenModeOld][selectedButtonsFieldId.split(":")[1]][0]+"names"
+      }
+      if (typeof dict[tempKey]!="undefined" && typeof dict[tempKey][document.getElementById(id).value]!="undefined"){
+        tempName=dict[tempKey][document.getElementById(id).value];
+      }
+      content='<table border="0" cellpadding="0" cellspacing="3"><tr><td class="transparent1NH p1 w2">Name:</td><td><input id="idName" value="'+tempName+'" /></td></tr><tr><td class="transparent1NH p1 w2">ID:</td><td><input ';
+      if (advancedMode==false){
+        content+='disabled="disabled" class="transparent1NH"'; 
+      }
+      content+='id="idid" value="'+document.getElementById(id).value+'"/></td></tr>';
+      if (choosenMode=="buttons" && choosenModeOld=="pages.json"){
+        var tempData=allDataArray["pages.json"][selectedButtonsFieldId.split(":")[1]];
+        content+='<tr><td class="transparent1NH p1 w2">Full Button ID:</td><td><input id="idFull" value="'+tempData[0]+"/"+tempData[0]+"/"+document.getElementById(id).value+'" disabled="disabled" class="transparent1NH" /></td></tr>';
+      }
+      content+='<tr><td align="right" colspan="2"><button class="p1 w2 default" onClick="BIDOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table>';
+      TINY.box.show({html:content,fixed:false,top:0,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){textFildOpen=true;},closejs:function(){closeText(id);}});
+    }
+    else if ((choosenMode=="devices.json" || choosenMode=="interfaces.json" || choosenMode=="programs.json") && (idData[2]=="2" || idData[2]=="4")){
+      if (idData[2]=="2"){
+        content='<table border="0" cellpadding="0" cellspacing="0" align="center"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="editorContent" style="height: 260px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table>';
+        content+='<table border="0" cellpadding="0" cellspacing="3" align="right"><tr><td><button class="p1 w2 default" onClick="parameterEditorOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table>';
+        TINY.box.show({html:content,fixed:false,top:0,height: 315,width: 300,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){initiateParameterEditor(id,1);},closejs:function(){closeText(id);}});
+      }
+      else if (idData[2]=="4"){
+        content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="PChooser" style="height: 230px; width: 166px; overflow-y: auto; overflow-x: hidden;"></div></td></tr><tr><td align="right" style="padding-top:3px;"><button class="p1 w2 default" onClick="PChooseOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table>';
+        TINY.box.show({html:content,fixed:false,top:0,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printListChooser(IDsArray['devices.json'],id);},closejs:function(){closeText(id);}});
+      }
+    }
+    else if (choosenMode=="extensionsCfg.json"){
+      if (idData[2]=="3"){
+        content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="PChooser" style="height: 230px; width: 166px; overflow-y: auto; overflow-x: hidden;"></div></td></tr><tr><td align="right" style="padding-top:3px;"><button class="p1 w2 default" onClick="PChooseOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table>';
+        TINY.box.show({html:content,fixed:false,top:0,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printListChooser(loadedPlugins,id);},closejs:function(){closeText(id);}});
+      }
+      else if(idData[2]=="4"){
+        content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="editorContent" align="center" style="height: 260px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table><table border="0" cellpadding="0" cellspacing="3" align="right"><tr>';
+        content+='<td><button class="p1 w2 default" onClick="dynamicIDEditorOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table><br><br>';
+        lineType="dynamicIDEditor";
+        TINY.box.show({html:content,fixed:false,top:0,height: 315,width: 340,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){initiateDynamicIDEditor(id,["ID","Value"]);},closejs:function(){closeText(id);}});
+        dragline="Bine";
+      }
+      else if (idData[2]=="5"){
+        content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="editorContent" align="center" style="height: 260px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table><table border="0" cellpadding="0" cellspacing="3" align="right"><tr>';
+        content+='<td><button class="p1 w2 default" onClick="dynamicIDEditorOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table><br><br>';
+        lineType="dynamicIDEditor";
+        TINY.box.show({html:content,fixed:false,top:0,height: 315,width: 590,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){initiateDynamicIDEditor(id,["ID","Name","Data Type","Presetted value"]);},closejs:function(){closeText(id);}});
+        dragline="Bine";
+      }
+      else if (idData[2]=="6"){
+        if (document.getElementById(idData[0]+":"+idData[1]+":1").value=="interface"){
+          document.getElementById(id).value="";
+          top.alertBox(top.getText("devframeMessages","noCommandsAllowed"),function(o){closeText(id);});
+        }
+        else{
+          content='<table border="0" cellpadding="0" cellspacing="0"><tr><td colspan="2"><div id="boxTitle"><br></div></td></tr><tr><td><div id="chooserContent" align="center" style="height: 260px; width: 87px; overflow-y: auto; overflow-x: hidden;"></div></td><td><div id="contentLine" align="center" style="height: 260px; width: 420px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table><table border="0" cellpadding="0" cellspacing="3" align="right"><tr>';
+          content+='<td><button id="insertEventB" class="p1 w3 default" onClick="insertEvent1(false,true);">'+top.getText('insertEvent',0)+'</button></td>';
+          content+='<td><button class="p1 w2 default" onClick="eventerOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table><br><br>';
+          lineType="eventer";
+          TINY.box.show({html:content,fixed:false,top:0,height: 315,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printEventer(id);},closejs:function(){closeText(id);}});
+          dragline="Cine";
+        }
+      }
+      else if (idData[2]=="7"){
+        content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="editorContent" align="center" style="height: 260px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table><table border="0" cellpadding="0" cellspacing="3" align="right"><tr>';
+        content+='<td><button class="p1 w2 default" onClick="dynamicIDEditorOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table><br><br>';
+        lineType="dynamicIDEditor";
+        TINY.box.show({html:content,fixed:false,top:0,height: 315,width: 500,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){initiateDynamicIDEditor(id,["ID","Name","Supported States"]);},closejs:function(){closeText(id);}});
+        dragline="Bine";
+      }
+      else if (idData[2]=="8"){
+        if (document.getElementById(idData[0]+":"+idData[1]+":7").value==""){
+          document.getElementById(id).value="";
+          top.alertBox(top.getText("devframeMessages","noCommandsAllowed"),function(o){closeText(id);});
+        }
+        else{
+          content='<table border="0" cellpadding="0" cellspacing="0"><tr><td colspan="3"><div id="boxTitle"><br></div></td></tr><tr><td><div id="actionChooserContent" align="center" style="height: 260px; width: 87px; overflow-y: auto; overflow-x: hidden;"></div></td><td><div id="chooserContent" align="center" style="height: 260px; width: 87px; overflow-y: auto; overflow-x: hidden;"></div></td><td><div id="editorContent" align="center" style="height: 260px; width: 680px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table><table border="0" cellpadding="0" cellspacing="3" align="right"><tr>';
+          content+='<td><button class="p1 w2 default" onClick="actionerOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table><br><br>';
+          lineType="actioner";
+          TINY.box.show({html:content,fixed:false,top:0,height: 315,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printActioner(id);},closejs:function(){closeText(id);}});
+          dragline="Bine";
+        }
+      }
+      else if (idData[2]=="9"){
+        if (document.getElementById(idData[0]+":"+idData[1]+":7").value==""){
+          document.getElementById(id).value="";
+          top.alertBox(top.getText("devframeMessages","noCommandsAllowed"),function(o){closeText(id);});
+        }
+        else{
+          content='<table border="0" cellpadding="0" cellspacing="0"><tr><td colspan="3"><div id="boxTitle"><br></div></td></tr><tr><td><div id="actionChooserContent" align="center" style="height: 260px; width: 87px; overflow-y: auto; overflow-x: hidden;"></div></td><td><div id="chooserContent" align="center" style="height: 260px; width: 87px; overflow-y: auto; overflow-x: hidden;"></div></td><td><div id="contentLine" align="center" style="height: 260px; width: 420px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table><table border="0" cellpadding="0" cellspacing="3" align="right"><tr>';
+          content+='<td><button id="insertEventB" class="p1 w3 default" onClick="insertEvent1(false,true);">'+top.getText('insertEvent',0)+'</button></td>';
+          content+='<td><button class="p1 w2 default" onClick="actionDynamicOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table><br><br>';
+          lineType="eventer";
+          TINY.box.show({html:content,fixed:false,top:0,height: 315,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printActionDynamic(id,eventerReadOut);},closejs:function(){closeText(id);}});
+          dragline="Bine";
+        }
+      }
+      else if (idData[2]=="10"){
+        if (document.getElementById(idData[0]+":"+idData[1]+":7").value==""){
+          document.getElementById(id).value="";
+          top.alertBox(top.getText("devframeMessages","noCommandsAllowed"),function(o){closeText(id);});
+        }
+        else{
+          content='<table border="0" cellpadding="0" cellspacing="0"><tr><td colspan="3"><div id="boxTitle"><br></div></td></tr><tr><td><div id="actionChooserContent" align="center" style="height: 260px; width: 87px; overflow-y: auto; overflow-x: hidden;"></div></td><td><div id="chooserContent" align="center" style="height: 260px; width: 87px; overflow-y: auto; overflow-x: hidden;"></div></td><td><div id="contentLine" align="center" style="height: 260px; width: 310px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table><table border="0" cellpadding="0" cellspacing="3" align="right"><tr>';
+          content+='<td><button class="p1 w2 default" onClick="actionDynamicOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table><br><br>';
+          lineType="buttonParameter";
+          parameterData=buttonParameterData;
+          TINY.box.show({html:content,fixed:false,top:0,height: 315,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printActionDynamic(id,buttonParameterReadOut);},closejs:function(){closeText(id);}});
+          dragline="Bine";
+        }
+      }
+      else{
+        stdTextBox(id);
+      }
+    }
+    else if (choosenMode=="pages.json"){
+      if(idData[2]=="5"){
+        lineType="none";
+        showButtons(id);
+      }
+      else if(idData[2]=="4"){
+        var hifisInputEditingArray=[];
+        for (var i=0; i<primeAudioDevices.length; i++){
+          hifisInputEditingArray.push([primeAudioDevices[i][0],dict[primeAudioDevices[i][1]][primeAudioDevices[i][0]],"str",""]);
+        }
+        content='<table border="0" cellpadding="0" cellspacing="0" align="center"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="editorContent" style="height: 260px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table>';
+        content+='<table border="0" cellpadding="0" cellspacing="3" align="right"><tr><td><button class="p1 w2 default" onClick="parameterEditorOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table>';
+        TINY.box.show({html:content,fixed:false,top:0,height: 315,width: 300,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){initiateParameterEditor(id,0,hifisInputEditingArray);},closejs:function(){closeText(id);}});
+      }
+      else if(idData[2]=="6"){
+        content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="PChooser" style="height: 230px; width: 166px; overflow-y: auto; overflow-x: hidden;"></div></td></tr><tr><td align="right" style="padding-top:3px;"><button class="p1 w2 default" onClick="PChooseOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table>';
+        TINY.box.show({html:content,fixed:false,top:0,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printListChooser(IDsArray['views.json'],id);},closejs:function(){closeText(id);}});
+      }
+      else{
+        stdTextBox(id);
+      }
+    }
+    else if (choosenMode=="templatesCfg.json"){
+      if(idData[2]=="5"){
+        if (document.getElementById(idData[0]+":"+idData[1]+":3").value!="-"){
+          lineType="none";
+          showButtons(id);
+        }
+        else{
+          document.getElementById(id).value="";
+          top.alertBox("It's not possible to set buttons on a template if it has no targetType!",function(o){closeText(id)});
+        }
+      }
+      else if (idData[2]=="7"){
+        content='<table border="0" cellpadding="0" cellspacing="0" align="center"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="editorContent" style="height: 260px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table>';
+        content+='<table border="0" cellpadding="0" cellspacing="3" align="right"><tr><td><button class="p1 w2 default" onClick="parameterEditorOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table>';
+        TINY.box.show({html:content,fixed:false,top:0,height: 315,width: 300,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){initiateParameterEditor(id,0,[["deticatedFrame",top.getText("devframe","deticatedFrame"),"checkbox","0"],["emptyCache",top.getText("devframe","emptyCache"),"checkbox","0"],["forceReload",top.getText("devframe","forceReload"),"checkbox","0"]]);},closejs:function(){closeText(id);}});
+      }
+      else{
+        stdTextBox(id);
+      }
+    }
+    else if (choosenMode=="buttons"){
+      var tempType=document.getElementById(idData[0]+":"+idData[1]+":1").value.split("/");
+      if (tempType.length==1){
+        printType=tempType[0];
+      }
+      else{
+        printType=eval('allDataArray[tempType[0]+".json"]['+tempType[0]+'IDArray[tempType[1]]][1]');
+      }
+      var printMode=document.getElementById(idData[0]+":"+idData[1]+":2").value;
+      if (idData[2]=="3"){
+        content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="BChooser" style="height: 420px; overflow-y: auto; overflow-x: hidden;"></div></td></tr><tr><td align="right" style="padding-top:3px;"><button class="p1 w2 default" onClick="BChooseOK1(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table>';
+        TINY.box.show({html:content,fixed:false,top:0,height: 475,width: 376,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printChooser0(id);},closejs:function(){closeText(id);}});
+      }
+      else if (idData[2]=="4"){
+        if (document.getElementById(idData[0]+":"+idData[1]+":3").value==""){
+          buttonWizard=false;
+          top.alertBox(top.getText("devframeMessages","noCommandsAllowed"),function(){closeText(id);});
+        }
+        else{
+          var tempVal=parseInt(document.getElementById(idData[0]+":"+idData[1]+":3").value.split(",")[0],10);
+          var preValue=document.getElementById(id).value;
+          if (tempVal<=-5&&tempVal>-10){
+            document.getElementById(id).value="";
+            if (preValue!=""){
+              fillButtonWithDefault(id);
+            }
+            if (advancedMode && !buttonWizard){
+              top.alertBox(top.getText("devframeMessages","noCommandsAllowed"),function(o){closeText(id);});
+            }
+            else{
+              refresh();
+            }
+          }
+          else if (tempVal<=0){
+            content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td rowspan="2"><div id="BChooser" style="height: 294px; width: 96px; overflow-x: hidden;"></div></td><td id="BSorter" valign="top" align="center" style="height: 256px; width: 140px;"></td></tr><tr><td align="right" style="padding-top:3px;"><button class="p1 w2 default" onClick="BChooseOK(\''+id+'\');">'+top.getText('ok',0)+'</button></td></tr></table>';
+            dragline="Bine";
+            lineType="BChooser";
+            TINY.box.show({html:content,fixed:false,top:0,height: 315,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printChooser(id);},closejs:function(){closeText(id);}});
+          }
+          else{
+            var printTarget=document.getElementById(idData[0]+":"+idData[1]+":1").value;
+            var targetStates=GetAllowedStates(printTarget,printMode);
+            if (targetStates.length==0){
+              targetStates.push("[activate]");
+            }
+            if (targetStates.length==1){
+              targetStates.push("[none]");
+            }
+            document.getElementById(id).value=targetStates.join();
+            if (preValue!=document.getElementById(id).value){
+              fillButtonWithDefault(id);
+              buttonWizard=true;
+            }
+            if (advancedMode && !buttonWizard){
+              top.alertBox(top.getText("devframeMessages","noCommandsAllowed"),function(o){closeText(id);});
+            }
+            else{
+              refresh();
+              openText1(choosenMode+':'+id.split(":")[1]+":5");
+            }
+          }
+        }
+      }
+      else if(idData[2]=="5" || idData[2]=="6"){
+        var tempNoOptions=false;
+        /*var tempData;
+        if (typeof buttonThingsIDArrayModes[document.getElementById(idData[0]+":"+idData[1]+":1").value]=="undefined"){
+          tempData=JSON.parse(allDataArray["extensionsCfg.json"][extensionsIDArray[document.getElementById(idData[0]+":"+idData[1]+":1").value]][7]);
+        }
+        else{
+          tempData=JSON.parse(buttonThingsIDArrayModes[document.getElementById(idData[0]+":"+idData[1]+":1").value][7]);
+        }
+        for (var j=0; j<tempData.length; j++){
+          if (tempData[j][0]==document.getElementById(idData[0]+":"+idData[1]+":2").value && tempData[j][2]=="" && (idData[2]=="5" || tempData[j][0]=="power")){
+            tempNoOptions=true;
+            break;
+          }
+        }*/
+        if (document.getElementById(idData[0]+":"+idData[1]+":4").value=="" && (idData[2]=="5" || document.getElementById(idData[0]+":"+idData[1]+":3").value.split(",")[0]!="-5") || tempNoOptions || tempType=="macro" && printMode=="copy" && idData[2]=="6"){
+          document.getElementById(id).value="";
+          buttonWizard=false;
+          top.alertBox(top.getText("devframeMessages","noCommandsAllowed"),function(o){closeText(id);});
+        }
+        else{
+          if (idData[2]=="5"){
+            content='<table border="0" cellpadding="0" cellspacing="0"><tr><td colspan="2"><div id="boxTitle"><br></div></td></tr>';
+            var boxHight=315;
+            if (tempType=="macro" && printMode=="copy"){
+              content+='<tr><td colspan="2"><div id="contentLine0" align="center" style="height: 60px;"></div></td></tr>';
+              boxHight+=60;
+            }
+            content+='<tr><td><div id="chooserContent" align="center" style="height: 260px; width: 87px; overflow-y: auto; overflow-x: hidden;"></div></td><td><div id="contentLine" align="center" style="height: 260px; width: 395px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table><table border="0" cellpadding="0" cellspacing="3" align="right"><tr>';
+            if (printType!="macro" && choosenModeOld!="templatesCfg.json"){
+              content+='<td><button id="testCommandB" class="p1 w2 default" onClick="commanderTest();">'+top.getText('test',0)+'</button></td>';
+            }
+            content+='<td><button class="p1 w2 default" onClick="commanderOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table><br><br>';
+            lineType="commander";
+            TINY.box.show({html:content,fixed:false,top:0,height: boxHight,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printCommander(id);},closejs:function(){closeText(id);}});
+          }
+          else{
+            content='<table border="0" cellpadding="0" cellspacing="0"><tr><td colspan="2"><div id="boxTitle"><br></div></td></tr><tr><td><div id="chooserContent" align="center" style="height: 260px; width: 87px; overflow-y: auto; overflow-x: hidden;"></div></td><td><div id="contentLine" align="center" style="height: 260px; width: 420px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table><table border="0" cellpadding="0" cellspacing="3" align="right"><tr>';
+            content+='<td><button id="insertEventB" class="p1 w3 default" onClick="insertEvent1(false,true);">'+top.getText('insertEvent',0)+'</button></td>';
+            content+='<td><button class="p1 w2 default" onClick="eventerOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table><br><br>';
+            lineType="eventer";
+            TINY.box.show({html:content,fixed:false,top:0,height: 315,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printEventer(id);},closejs:function(){closeText(id);}});
+          }
+          dragline="Cine";
+        }
+      }
+      else if(idData[2]=="7"){
+        content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="chooserContent" align="center" style="height: 260px; width: 87px; overflow-y: auto; overflow-x: hidden;"></div></td><td><div id="contentLine" align="center" style="height: 260px; width: 340px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table><table border="0" cellpadding="0" cellspacing="3" align="right"><tr>';
+        content+='<td><button class="p1 w2 default" onClick="buttonParameterOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table><br><br>';
+        lineType="buttonParameter";
+        TINY.box.show({html:content,fixed:false,top:0,height: 315,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){initiateParameterEditorButtons(id);},closejs:function(){closeText(id);}});
+      }
+      else if(idData[2]=="9"){
+        content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="PChooser" style="height: 230px; width: 166px; overflow-y: auto; overflow-x: hidden;"></div></td></tr><tr><td align="right" style="padding-top:3px;"><button class="p1 w2 default" onClick="PChooseOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table>';
+        TINY.box.show({html:content,fixed:false,top:0,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printListChooser(IDsArray['views.json'],id);},closejs:function(){closeText(id);}});
+      }
+      else{
+        stdTextBox(id);
+      }
+    }
+    else if (choosenMode=="users.json"){
+      if (idData[2]=="1"){
+        stdPasswordBox(id);
+      }
+      else if (idData[2]=="2"){
+        content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="PChooser" style="height: 230px; width: 166px; overflow-y: auto; overflow-x: hidden;"></div></td></tr><tr><td align="right" style="padding-top:3px;"><button class="p1 w2 default" onClick="PChooseOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table>';
+        TINY.box.show({html:content,fixed:false,top:0,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printListChooser(IDsArray['views.json'],id);},closejs:function(){closeText(id);}});
+      }
+      else if (idData[2]=="3"){
+        content='<table border="0" cellpadding="0" cellspacing="0" align="center"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="editorContent" style="height: 260px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table>';
+        content+='<table border="0" cellpadding="0" cellspacing="3" align="right"><tr><td><button class="p1 w2 default" onClick="parameterEditorOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table>';
+        TINY.box.show({html:content,fixed:false,top:0,height: 315,width: 300,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){initiateParameterEditor(id,0,[["isAdmin",top.getText("devframe","isAdmin"),"checkbox","0"],["isSceneEditor",top.getText("devframe","isSceneEditor"),"checkbox","0"]]);},closejs:function(){closeText(id);}});
+      }
+      else{
+        stdTextBox(id);
+      }
+    }
+    else if (choosenMode=="files.json"){
+      if(idData[2]=="5"){
+        lineType="none";
+        showButtons(id);
+      }
+      else if(idData[2]=="4"){
+        var hifisInputEditingArray=[];
+        for (var i=0; i<top.devices.length; i++){
+          if(typeof top.devices[i][2]["masterAudio"]!="undefined" && top.devices[i][2]["masterAudio"]=="1"){
+            hifisInputEditingArray.push([top.devices[i][0],dict["devices.jsonnames"][top.devices[i][0]],"str",""]);
+          }
+        }
+        content='<table border="0" cellpadding="0" cellspacing="0" align="center"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="editorContent" style="height: 260px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table>';
+        content+='<table border="0" cellpadding="0" cellspacing="3" align="right"><tr><td><button class="p1 w2 default" onClick="parameterEditorOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table>';
+        TINY.box.show({html:content,fixed:false,top:0,height: 315,width: 300,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){initiateParameterEditor(id,0,hifisInputEditingArray);},closejs:function(){closeText(id);}});
+      }
+      else if(idData[2]=="10"){
+        content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="PChooser" style="height: 230px; width: 166px; overflow-y: auto; overflow-x: hidden;"></div></td></tr><tr><td align="right" style="padding-top:3px;"><button class="p1 w2 default" onClick="PChooseOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table>';
+        TINY.box.show({html:content,fixed:false,top:0,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){printListChooser(IDsArray['views.json'],id);},closejs:function(){closeText(id);}});
+      }
+      else{
+        stdTextBox(id);
+      }
+    }
+    else if (choosenMode=="doku.json"){
+      if(idData[2]=="6"){
+        content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="editorContent" align="center" style="height: 460px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table><table border="0" cellpadding="0" cellspacing="3" align="right"><tr>';
+        content+='<td><button class="p1 w2 default" onClick="dynamicIDEditorOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table><br><br>';
+        lineType="dynamicIDEditor";
+        TINY.box.show({html:content,fixed:false,top:0,height: 515,width: 1040,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){initiateDynamicIDEditor(id,["ID","Required","Type","Default Value","Possible Values","Description"]);},closejs:function(){closeText(id);}});
+        dragline="Bine";
+      }
+      else if(idData[2]=="7"){
+        content='<table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="boxTitle"><br></div></td></tr><tr><td><div id="editorContent" align="center" style="height: 360px; overflow-y: auto; overflow-x: hidden;"></div></td></tr></table><table border="0" cellpadding="0" cellspacing="3" align="right"><tr>';
+        content+='<td><button class="p1 w2 default" onClick="dynamicIDEditorOK(\''+id+'\');">'+top.getText("ok",0)+'</button></td></tr></table><br><br>';
+        lineType="dynamicIDEditor";
+        TINY.box.show({html:content,fixed:false,top:0,height: 415,width: 600,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){initiateDynamicIDEditor(id,["Command","Returns"]);},closejs:function(){closeText(id);}});
+        dragline="Bine";
+      }
+      else{
+        stdTextBox(id);
+      }
+    }
+    else{
+      stdTextBox(id);
+    }
+  }
+}
+
+function stdTextBox(id,returnTranslator){
+  returnTranslator=returnTranslator||false;
+  content='<table border="0" cellpadding="0" cellspacing="3" align="right"><tr><td colspan="2"><div id="boxTitle"><br></div></td></tr><tr><td colspan="2"><textarea id="textField" border="0" class="w6"></textarea></td></tr><tr><td></td>';
+  content+='<td style="width:1px;"><button class="p1 w2 default" onClick="openTextOK(\''+id+'\');">'+top.getText('ok',0)+'</button></td>';
+  content+='</tr></table>';
+  TINY.box.show({html:content,fixed:false,top:0,height: 115,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){openText2(id);},closejs:function(){closeText(id);}});
+}
+
+function stdPasswordBox(id){
+  content='<table border="0" cellpadding="0" cellspacing="3" align="right"><tr><td colspan="2"><div id="boxTitle"><br></div></td></tr><tr><td colspan="2"><input id="textField" type="password" class="w4"/></td></tr><tr>';
+  content+='<td style="width:1px;"><button class="p1 w2 default" onClick="openPasswordOK(\''+id+'\');">'+top.getText('ok',0)+'</button></td><td style="width:1px;"><button class="p1 w2 default" onClick="closeText(\''+id+'\');">'+top.getText('cancel',0)+'</button></td>';
+  content+='</tr></table>';
+  TINY.box.show({html:content,fixed:false,top:0,height: 115,boxid:'noMaskBox',mask:false,animate:false,close:false,openjs:function(){openPassword2(id);},closejs:function(){closeText(id);}});
+}
+
+function openText2(id){
+  var idData = id.split(":");
+  if (idData[0]==choosenMode+"ddd"){
+    document.getElementById("boxTitle").innerHTML=top.getText("languages",tableHeadLanguageArray[idData[2]])+":";
+  }
+  else if (idData[0]==choosenMode+"dddshort"){
+    document.getElementById("boxTitle").innerHTML=top.getText("languages",tableHeadLanguageArray[idData[2]])+"(short):";
+  }
+  else{
+    document.getElementById("boxTitle").innerHTML=top.getText("devframe",tableHeadArray[choosenMode][idData[2]][0])+":";
+  }
+  textFildOpen=true;
+  lastSelectedTextField=document.getElementById("textField");
+  lastSelectedTextField.value=document.getElementById(id).value;
+}
+function openPassword2(id){
+  var idData = id.split(":");
+  if (idData[0]==choosenMode+"ddd"){
+    document.getElementById("boxTitle").innerHTML=top.getText("languages",tableHeadLanguageArray[idData[2]])+":";
+  }
+  else if (idData[0]==choosenMode+"dddshort"){
+    document.getElementById("boxTitle").innerHTML=top.getText("languages",tableHeadLanguageArray[idData[2]])+"(short):";
+  }
+  else{
+    document.getElementById("boxTitle").innerHTML=top.getText("devframe",tableHeadArray[choosenMode][idData[2]][0])+":";
+  }
+  textFildOpen=true;
+  lastSelectedTextField=document.getElementById("textField");
+}
+function openTextOK(id){
+  document.getElementById(id).value=document.getElementById("textField").value;
+  TINY.box.hide();
+}
+function openPasswordOK(id){
+  document.getElementById(id).value=$.md5(document.getElementById("textField").value);
+  TINY.box.hide();
+}
+function closeText(id){
+  $(document.getElementById(id)).removeClass("blinking");
+  textFildOpen=false;
+  if (selectedTable=="2"){
+    dragline="jine";
+  }
+  else{
+    dragline="line";
+  }
+  lineType="none";
+  refresh();
+  if (buttonWizard){
+    var tempIdArray=id.split(":");
+    if (tempIdArray[2]=="7"){
+      buttonWizard=false;
+    }
+    else{
+      openText1(tempIdArray[0]+':'+tempIdArray[1]+":"+(parseInt(tempIdArray[2])+1));
+    }
+  }
+}
+
+
+function printReturn(event){
+  if(event.which==13){
+    top.insert("<br>","",event.target);
+  }
+}
+
+function insertEvent1(targetElement,justDo){
+  justDo=justDo||false;
+  if(justDo || omega.MultiTriggerCheck({id:targetElement})==2){
+    top.openEventLog(omega.pageID,targetElement);
+  }
+}
+
+omega.insertEvent = function(eventData){
+  eventerReadOut(commanderSelected);
+  var tempPrintData=printData[printScope[commanderSelected]];
+  if (tempPrintData[tempPrintData.length-1][0]=="" && tempPrintData[tempPrintData.length-1][1]==""){
+    tempPrintData[tempPrintData.length-1]=[eventData[0],eventData[1],""];
+  }
+  else{
+    tempPrintData.push([eventData[0],eventData[1],""]);
+  }
+  printEventerLine(commanderSelected);
+}
+
+
+function addLine(){
+  getTable(true,false);
+  allDataRows[choosenMode]++;
+  allDataArray[choosenMode][allDataRows[choosenMode]-1]=[];
+  for (var y=0; y<allDataCols[choosenMode]; y++){
+    if (tableHeadArray[choosenMode][y][1]=="id"){
+      j=-1;
+      var isThere=true;
+      while (isThere){
+        j++;
+        isThere=false;
+        for (var k=0; k<allDataRows[choosenMode]; k++){
+          if (j==parseInt(allDataArray[choosenMode][k][y],10)){
+            isThere=true;
+          }
+        }
+      }
+      allDataArray[choosenMode][allDataRows[choosenMode]-1][y]=j;
+    }
+    else{
+      if (tableHeadArray[choosenMode][y][1]=="num"){
+        allDataArray[choosenMode][allDataRows[choosenMode]-1][y]=null;
+      }
+      else{
+        allDataArray[choosenMode][allDataRows[choosenMode]-1][y]="";
+      }
+    }
+  }
+  tablePrint();
+  refresh();
+  //if (choosenMode=="buttons"){
+  openText1(choosenMode+':'+(allDataRows[choosenMode]-1)+":0");
+  //}
+}
+
+function getTable(noSave,dele){
+  allDataArray[choosenMode]=[];
+  delArray=[];
+  dictIdArray=[];
+  dictArray=[];
+  dictArray2=[];
+  var tempKey=choosenMode;
+  if (choosenMode=="buttons"){
+    tempKey=choosenModeOld+allDataArray[choosenModeOld][selectedButtonsFieldId.split(":")[1]][0];
+  }
+  dict[tempKey]={};
+  if (tableModeWithShortTranslationArray.indexOf(choosenMode)!=-1){
+    dict[choosenMode+"short"]={};
+  }
+  var tempRows=allDataRows[choosenMode];
+  allDataRows[choosenMode]=0;
+  for (var i=0; i<tempRows; i++){
+    delArray[i]=document.getElementById(choosenMode+':'+i+':del').checked;
+    var tempId2=document.getElementById(choosenMode+':'+i+':0').value;
+    if (tempId2==""){
+      top.alertBox(top.getText("devframeMessages","idMustNotBeEmpty"));
+      return false;
+    }
+    if (tableModeWithTranslationArray.indexOf(choosenMode)!=-1){
+      dictIdArray[i]=document.getElementById(choosenMode+'ddd:dict:'+i).innerHTML;
+      dict[tempKey][tempId2]=[];
+      if (tableModeWithShortTranslationArray.indexOf(choosenMode)!=-1){
+        dict[choosenMode+"short"][tempId2]=[];
+      }
+    }
+    if ((delArray[i]==false || tempId2=="-") || dele==false){
+      allDataArray[choosenMode].push([]);
+      var a=allDataRows[choosenMode];
+      for (var y=0; y<allDataCols[choosenMode]; y++){
+        if (document.getElementById(choosenMode+':'+i+':'+y).type=="checkbox"){
+          if (document.getElementById(choosenMode+':'+i+':'+y).checked){
+            allDataArray[choosenMode][a].push(1);
+          }
+          else{
+            allDataArray[choosenMode][a].push(0);
+          }
+        }
+        else{
+          if(tableHeadArray[choosenMode][y][1]=='int'){
+            var tempvar=document.getElementById(choosenMode+':'+i+':'+y).value;
+            if (isNaN(tempvar) || tempvar==""){
+              allDataArray[choosenMode][a].push(null);
+            }
+            else{
+              allDataArray[choosenMode][a].push(parseInt(tempvar,10));
+            }
+          }
+          else if(tableHeadArray[choosenMode][y][1]=='arr'){
+            var tempArr=document.getElementById(choosenMode+':'+i+':'+y).value.split(",");
+            for (var z=0; z<tempArr.length; z++){
+              tempArr[z]=tempArr[z].trim();
+            }
+            allDataArray[choosenMode][a].push(tempArr);
+          }
+          else{
+            allDataArray[choosenMode][a].push(document.getElementById(choosenMode+':'+i+':'+y).value);
+          }
+        }
+      }
+      if (tableModeWithTranslationArray.indexOf(choosenMode)!=-1){
+        dictArray[i]=[];
+        var tempIdString=choosenMode+"ddd:"+i+":";
+        for (var z=0; z<tableHeadLanguageArray.length; z++){
+          dictArray[i][z]=document.getElementById(tempIdString+z).value;
+        }
+        for (var z=0; z<tableHeadLanguageArray.length; z++){
+          tempText=document.getElementById(tempIdString+z).value;
+          if (tempText===""&&document.getElementById(tempIdString+0).value!==""){
+            tempText=document.getElementById(tempIdString+0).value;
+          }
+          dict[tempKey][tempId2].push(top.replaceuml(tempText));
+        }
+        if (tableModeWithShortTranslationArray.indexOf(choosenMode)!=-1){
+          dictArray2[i]=[];
+          var tempIdString=choosenMode+"dddshort:"+i+":";
+          for (var z=0; z<tableHeadLanguageArray.length; z++){
+            dictArray2[i][z]=document.getElementById(tempIdString+z).value;
+          }
+          for (var z=0; z<tableHeadLanguageArray.length; z++){
+            tempText=document.getElementById(tempIdString+z).value;
+            if (tempText===""&&document.getElementById(tempIdString+0).value!==""){
+              tempText=document.getElementById(tempIdString+0).value;
+            }
+            dict[choosenMode+"short"][tempId2].push(top.replaceuml(tempText));
+          }
+        }
+      }
+      allDataRows[choosenMode]++;
+    }
+    else{
+      dict[tempKey][tempId2]=null;
+      delete dict[tempKey][tempId2];
+      if (tempKey!="files.json"){
+          dict[tempKey+"names"][tempId2]=null;
+          delete dict[tempKey+"names"][tempId2];
+      }
+      if (tableModeWithShortTranslationArray.indexOf(choosenMode)!=-1){
+        dict[choosenMode+"short"][tempId2]=null;
+        delete dict[choosenMode+"short"][tempId2];
+      }
+      if (tempKey=="pages.json" || tempKey=="templatesCfg.json" || tempKey=="files.json"){
+        dict[tempKey+tempId2]=null;
+        delete dict[tempKey+tempId2];
+        dict[tempKey+tempId2+"names"]=null;
+        delete dict[tempKey+tempId2+"names"];
+      }
+      if (tempKey=="pages.json"){ 
+        var tempLate=document.getElementById(tempKey+':'+i+':3').value;
+        dict["files.json"+tempId2+"/"+tempLate]=null;
+        delete dict["files.json"+tempId2+"/"+tempLate];
+      }
+    }
+  }
+  if (noSave==false){
+    omega.Request({'method':'makeBackup','callback':function(data2){
+      if (data2==true){
+        if (choosenMode=="pages.json"){
+          templateChilds={};
+          templatesIDArray=[];
+          for (var i=0; i<allDataArray["templatesCfg.json"].length; i++){
+            templatesIDArray[allDataArray["templatesCfg.json"][i][0]]=i;
+            if (allDataArray["templatesCfg.json"][i][2]!="-"){
+              if (typeof templateChilds[allDataArray["templatesCfg.json"][i][2]]=="undefined"){
+                templateChilds[allDataArray["templatesCfg.json"][i][2]]=[];
+              }
+              templateChilds[allDataArray["templatesCfg.json"][i][2]].push(allDataArray["templatesCfg.json"][i][0]);
+            }
+          }
+          dict["files.json"]={}
+          var tempData=[["dashboard","hide","-","/systemTemplates/dashboard/dashboard.html","","","default",0,0,0,[""]]];//<--Edit here!
+          dict["files.json"]["dashboard"]=["Dashboard","Dashboard"];
+          for (var i=0; i<allDataArray[choosenMode].length; i++){
+            pagesIDArray[allDataArray[choosenMode][i][0]]=i;
+          }
+          for (var i=0; i<allDataArray[choosenMode].length; i++){
+            if (allDataArray[choosenMode][i][1]=="-"){
+              tempData=tempData.concat(createFiles1(i));
+            }
+          }
+          tempData=tempData.concat([["scene","hide","-","/systemTemplates/scene/sceneframeindex.html","","","default",0,0,0,[""]],["sceneactions","scene","-","/systemTemplates/scene/sceneActionframe.html","","","sceneframe",0,0,0,[""]],["scenetimer","scene","-","/systemTemplates/scene/sceneTimerframe.html","","","sceneframe",0,0,0,[""]],["sceneevents","scene","-","/systemTemplates/scene/sceneEventsframe.html","","","sceneframe",0,0,0,[""]],["scenesettings","scene","-","/systemTemplates/scene/sceneSettingsframe.html","","","sceneframe",0,0,0,[""]],["eventLog","hide","-","/systemTemplates/eventLog/eventLogframe.html","","","eventLog",1,0,0,[""]],["sceneFunctions","hide","-","/systemTemplates/menu2/menuindex.html","","[[\"0\",\"frontend\",\"jsCommand\",[\"1\",\"2\"],[\"[activate]\",\"[none]\"],\"{\\\"[activate]\\\":{\\\"command\\\":[\\\"top.sceneRecordEnd(false,top.sceneRecording);\\\",0]},\\\"[none]\\\":\\\"\\\"}\",\"\",\"{\\\"[activate]\\\":{\\\"cssClasses\\\":\\\"defaultNH Hred\\\"}}\"]]","sceneFunctionsframe",1,0,0,[""]],["sceneWait","sceneFunctions","-","/systemTemplates/settings/wait.html","","","sceneFunctionsdefault",0,0,0,[""]],["sceneExecuteCommand","sceneFunctions","-","/systemTemplates/settings/executeCommand.html","","","sceneFunctionsdefault",0,0,0,[""]]]);//<--Edit here! (IE versteht den "/" nicht)
+          dict["files.json"]["sceneExecuteCommand"]=["Execute<br>Command","Befehl<br>Ausf&uuml;hren"];
+          dict["files.json"]["scene"]=["Scene","Szene"];
+          dict["files.json"]["sceneactions"]=["Actions","Aktionen"];
+          dict["files.json"]["scenetimer"]=["Timer","Timer"];
+          dict["files.json"]["sceneevents"]=["Events","Ereignisse"];
+          dict["files.json"]["scenesettings"]=["Advanced<br>Settings", "Erweiterte<br>Einstellungen"];
+          dict["files.json"]["eventLog"]=["Event&nbsp;Log","Ereignis<br>Log"];
+          dict["files.json"]["sceneFunctions"]=["Scene<br>Functions","Szenen<br>Funktionen"];
+          dict["files.json"]["sceneWait"]=["Wait","Warten"];
+          dict["files.jsonsceneFunctions"]={};
+          dict["files.jsonsceneFunctions"]["0"]=["Cancel<br>Recording","Aufnahme<br>Abbrechen"];
+          omega.Request({'method':'saveConfig','args':[dict,"dictionary.json"],'callback':function(data2){
+            if (data2==true){
+              omega.Request({'method':'saveConfig','args':[tempData,"files.json"],'callback':function(data2){
+                if (data2==true){
+                  saveFile();
+                }  
+                else{
+                  top.alertBox(top.getText("error")+"! (files.json)");
+                }
+              }});
+            }
+            else{
+              top.alertBox(top.getText("error")+"! (dictionary.json)");
+            }
+          }});
+        }
+        else{
+          omega.Request({'method':'saveConfig','args':[dict,"dictionary.json"],'callback':function(data2){
+            if (data2==true){
+              saveFile();
+            }
+            else{
+              top.alertBox(top.getText("error")+"! (dictionary.json)");
+            }
+          }});
+        }
+      }  
+      else{
+        top.alertBox(top.getText("error")+"! (backup)");
+      }
+    }});
+  }
+  reloadTableHead();
+}
+
+function saveFile(){
+  omega.Request({'method':'saveConfig','args':[allDataArray[choosenMode],choosenMode],'callback':function(data2){
+    if (data2==true){
+      if (choosenMode!="doku.json"){
+        top.alertBox(top.getText("configSaved")+"! ("+choosenMode+")",function(o){top.location.reload();});
+      }
+      else{
+        top.alertBox(top.getText("configSaved")+"! ("+choosenMode+")");
+      }
+    }  
+    else{
+      top.alertBox(top.getText("error")+"! ("+choosenMode+")");
+    }
+  }});
+}
+
+var pageToBeCreated;
+function createFiles1(i){
+  var result=[];
+  for (var j=0; j<i; j++){
+    if(allDataArray["pages.json"][j][1]==allDataArray["pages.json"][i][0]){
+      result=result.concat(createFiles1(j));
+    }
+  }
+  pageToBeCreated=i;
+  result=result.concat(createFiles2(allDataArray["pages.json"][i][3],allDataArray["pages.json"][i][0],false));
+  for (var j=i+1; j<allDataArray["pages.json"].length; j++){
+    if(allDataArray["pages.json"][j][1]==allDataArray["pages.json"][i][0]){
+      result=result.concat(createFiles1(j));
+    }
+  }
+  return result;
+}
+
+function createFiles2(templateID,parent,templateChild){
+  var result=[];
+  var tempData=allDataArray["templatesCfg.json"][templatesIDArray[templateID]];
+  result[0]=[];
+  if (templateChild){
+    result[0][0]=allDataArray["pages.json"][pageToBeCreated][0]+"."+tempData[0];
+    if (typeof dict["templatesCfg.json"][tempData[0]]!="undefined"){
+      dict["files.json"][result[0][0]]=dict["templatesCfg.json"][tempData[0]];
+    }
+    result[0][1]=parent;
+  }
+  else{
+    result[0][0]=allDataArray["pages.json"][pageToBeCreated][0];
+    if (typeof dict["pages.json"][allDataArray["pages.json"][pageToBeCreated][0]]!="undefined" && dict["pages.json"][allDataArray["pages.json"][pageToBeCreated][0]].join("")!=""){
+      dict["files.json"][result[0][0]]=dict["pages.json"][allDataArray["pages.json"][pageToBeCreated][0]];
+    }
+    else if (typeof dict["templatesCfg.json"][tempData[0]]!="undefined"){
+      dict["files.json"][result[0][0]]=dict["templatesCfg.json"][tempData[0]];
+    }
+    var tempParentPageID=allDataArray["pages.json"][pagesIDArray[parent]][1];
+    if (tempParentPageID=="-" || tempParentPageID=="hide"){
+      result[0][1]=tempParentPageID;
+    }
+    else{
+      result[0][1]=allDataArray["pages.json"][pagesIDArray[tempParentPageID]][0];
+    }
+  }
+  dict["files.json"+result[0][0]]={};
+  result[0][2]=allDataArray["pages.json"][pageToBeCreated][2];
+  result[0][3]=tempData[4];
+  result[0][4]=allDataArray["pages.json"][pageToBeCreated][4];
+  if (parent.split("/").length==1 && allDataArray["pages.json"][pageToBeCreated][5].length>0){
+    if (tempData[5].length==0){
+      result[0][5]=JSON.stringify(resolveDataForPageButtons(allDataArray["pages.json"][pageToBeCreated][0],allDataArray["pages.json"][pageToBeCreated][5],result[0][0]));
+    }
+    else{
+      var tempButtons=resolveDataForTemplateButtons(tempData[0],allDataArray["pages.json"][pageToBeCreated][2],tempData[5],result[0][0]);
+      var tempButtons2=resolveDataForPageButtons(allDataArray["pages.json"][pageToBeCreated][0],allDataArray["pages.json"][pageToBeCreated][5],result[0][0]);
+      result[0][5]=JSON.stringify(tempButtons.concat(tempButtons2));
+    }
+  }
+  else if(tempData[5]==""){
+    result[0][5]="";
+  }
+  else{
+    result[0][5]=JSON.stringify(resolveDataForTemplateButtons(tempData[0],allDataArray["pages.json"][pageToBeCreated][2],tempData[5],result[0][0]));
+  }
+  var tempFrameName;
+  var selectedDict = {};
+  try{
+    selectedDict = JSON.parse(tempData[7]);
+  }
+  catch(e){
+    selectedDict = {};
+  }
+  if (typeof selectedDict!="object"){
+    selectedDict = {};
+  }
+  if (typeof selectedDict["deticatedFrame"]!="undefined" && selectedDict["deticatedFrame"]==1){
+    tempFrameName=result[0][0];
+  }
+  else if(result[0][1]=="-" || result[0][1]=="hide"){
+    tempFrameName="default";
+  }
+  else{
+    tempFrameName=result[0][1]+"/default";
+  }
+  result[0][6]="f"+tempFrameName.replace(/\//g,"");//IE versteht den "/" in frame names scheinbar nicht
+  var tempValue=0;
+  if (typeof selectedDict["emptyCache"]!="undefined" && selectedDict["emptyCache"]==1){
+    tempValue=1;
+  }
+  result[0][7]=tempValue;
+  tempValue=0;
+  if (typeof selectedDict["forceReload"]!="undefined" && selectedDict["forceReload"]==1){
+    tempValue=1;
+  }
+  result[0][8]=tempValue;
+  tempValue=0;
+  if (tempData[4]==""){
+    tempValue=1;
+  }
+  result[0][9]=tempValue;
+  if(typeof templateChilds[templateID]!="undefined"){
+    for (var i=0; i<templateChilds[templateID].length; i++){
+      result=result.concat(createFiles2(templateChilds[templateID][i],result[0][0],true));
+    }
+  }
+  result[0][10]=allDataArray["pages.json"][pageToBeCreated][6];
+  return result;
+}
+
+function resolveDataForPageButtons(tempPageID, buttons, result00){
+  buttons=JSON.parse(buttons);
+  for (var i=0; i<buttons.length; i++){
+    if (typeof dict["pages.json"+tempPageID]!="undefined" && dict["pages.json"+tempPageID][buttons[i][0]]!="undefined"){
+     dict["files.json"+result00][tempPageID+"/"+buttons[i][0]]=dict["pages.json"+tempPageID][buttons[i][0]];
+    }
+    buttons[i][0]=tempPageID+"/"+buttons[i][0];
+    buttons[i]=replaceVariableForButton(buttons[i]);
+  }
+  return buttons;
+}
+
+function resolveDataForTemplateButtons(templateID,target,buttons,result00){
+  buttons=JSON.parse(buttons);
+  for (var i=0; i<buttons.length; i++){
+    if (typeof dict["templatesCfg.json"+templateID]!="undefined" && dict["templatesCfg.json"+templateID][buttons[i][0]]!="undefined"){
+      dict["files.json"+result00][templateID+"/"+buttons[i][0]]=dict["templatesCfg.json"+templateID][buttons[i][0]];
+    }
+    buttons[i][0]=templateID+"/"+buttons[i][0];
+    buttons[i][1]=target;
+    buttons[i]=replaceVariableForButton(buttons[i]);
+  }
+  return buttons;
+}
+
+function replaceVariableForButton(button){
+  for (var j=5; j<=6; j++){
+    if (button[j]!=""){
+      var tempField=JSON.parse(button[j]);
+      var tempKeys=[];
+      for (var key in tempField){
+        if (tempField.hasOwnProperty(key)) {
+            tempKeys.push(key);
+        }
+      }
+      for (var y=0; y<tempKeys.length; y++){
+          for (var b=0; b<tempField[tempKeys[y]].length; b++){
+            if (j==6){
+              for (var z=0; z<tempField[tempKeys[y]][b].length-1; z++){
+                tempField[tempKeys[y]][b][z]=replaceVariableInText(tempField[tempKeys[y]][b][z],button[1]);
+              }
+            }
+            else{
+              tempField[tempKeys[y]][b]=replaceVariableInText(tempField[tempKeys[y]][b],button[1]);
+            }
+          }
+      }
+      button[j]=JSON.stringify(tempField);
+    }
+  }
+  return button
+}
+
+function replaceVariableInText(oldText,target){
+  var re = /{([^}]+)}/g, newText;
+  while(newText = re.exec(oldText)) {
+    var tempResult=newText[1];
+    try{
+      tempResult=JSON.parse(newText[1]);
+    }
+    catch(e){
+      var tempResultParts=newText[1].split(".");
+      if (tempResultParts[0]=="target"){
+        var tempTargetParts=target.split("/");
+        for (var a=0; a<allDataArray[tempTargetParts[0]+".json"].length; a++){
+          if (allDataArray[tempTargetParts[0]+".json"][a][0]==tempTargetParts[1]){
+            if (tempResultParts.length==2){
+              tempResult=allDataArray[tempTargetParts[0]+".json"][a][parseInt(tempResultParts[1],10)];
+            }
+            else if(tempResultParts.length==3){
+              tempResult=JSON.parse(allDataArray[tempTargetParts[0]+".json"][a][parseInt(tempResultParts[1],10)])[tempResultParts[2]];
+            }
+            break;
+          }
+        }
+      }
+    }
+    if (newText[1]!=tempResult){
+      oldText=oldText.replace(newText[0],tempResult);
+      //console.log('Replace '+newText+' with '+tempResult);
+      newText = re.exec(oldText)
+    }
+  }
+  return oldText;
+}
+
+//----------------------------------------dragAndDropStart--------------------------------------//
+function dragging(overPos){
+  if (dragStarted==true){
+    if (overPos>overPosA){
+      for (var i=overPosA; i<overPos; i++){          
+        $(document.getElementById(dragline+i)).removeClass("dragging");
+        if (overPos>startId){
+          shiftCells(i,i+1);
+        }     
+        else{
+          shiftCells(i,i);
+        }
+      }
+      shiftCells(overPos,startId);
+      overPosA=overPos;
+      if (dragline=="Cine"){
+        if (lineType=="commander"){
+          printCommanderLine(commanderSelected);
+        }
+        else if(lineType=="eventer"){
+          printEventerLine(commanderSelected);
+        }
+      }
+    }
+    else if (overPos<overPosA){
+      for (var i=overPosA; i>overPos; i--){
+        $(document.getElementById(dragline+i)).removeClass("dragging");
+        if (overPos<startId){
+          shiftCells(i,i-1);
+        }     
+        else{
+          shiftCells(i,i);
+        }
+      }
+      shiftCells(overPos,startId);
+      overPosA=overPos;
+      if (dragline=="Cine"){
+        if (lineType=="commander"){
+          printCommanderLine(commanderSelected);
+        }
+        else if(lineType=="eventer"){
+          printEventerLine(commanderSelected);
+        }
+      }
+    }
+  }
+}
+
+function shiftCells(i,i2){
+  if (dragline=="line" || dragline=="jine"){
+    shiftCell(i,'del','checkbox',delArray[i2],i2,"");
+    for (var j=0; j<allDataCols[choosenMode]; j++){
+      shiftCell(i,j,tableHeadArray[choosenMode][j][1],allDataArray[choosenMode][i2][j],i2,"");
+    }
+    if (tableModeWithTranslationArray.indexOf(choosenMode)!=-1){
+      shiftCell('dict',i,'normal',dictIdArray[i2],i2,"ddd");
+      for (var z=0; z<dictArray[0].length; z++){
+        shiftCell(i,z,'str',dictArray[i2][z],i2,"ddd");
+      }
+      if (tableModeWithShortTranslationArray.indexOf(choosenMode)!=-1){
+        for (var z=0; z<dictArray2[0].length; z++){
+          shiftCell(i,z,'str',dictArray2[i2][z],i2,"dddshort");
+        }
+      }
+    }
+  }
+  else if (dragline=="Bine"){
+    if (lineType=="dynamicIDEditor"){
+      for (var j=0; j<boxHeadlines.length; j++){
+        document.getElementById('Bp.'+i+'.'+(j+1)).value =chooserSelectedArray[i2][j];
+      }
+    }
+    else if (lineType=="actioner"){
+      for (var j=0; j<boxHeadlines.length; j++){
+        document.getElementById('Bp.'+i+'.'+(j+1)).value =printData[printActions[selectedAction][0]][printScope[commanderSelected]][i2][j];
+      }
+    }
+    else if (lineType=="BChooser"){
+      document.getElementById('Bp.'+i+'.1').innerHTML =top.getText('statesCfg.json',chooserSelectedArray[i2]);
+      chooserSelectedArray2[i]=chooserSelectedArray[i2];
+    }
+  }
+  else if (dragline=="Cine"){
+    printData[printScope[commanderSelected]][i]=printData2[printScope[commanderSelected]][i2];
+  }
+}
+
+function shiftCell(i,j,type,val,i2,addi){
+  if (type=="dic1"){
+    var tempData;
+    if (buttonsTarget!="-" && typeof tableHeadArray[choosenMode][j][2][buttonsTarget]=="undefined"){
+      tempData=allDataArray["extensionsCfg.json"][extensionsIDArray[buttonsTarget]][7];      
+    }
+    else{
+      tempData=tableHeadArray[choosenMode][j][2][allDataArray[choosenMode][i2][tableHeadArray[choosenMode][j][3]]][7];
+    }
+    if (tempData!=""){
+      try{
+        tempData=JSON.parse(tempData);
+      }
+      catch(e){
+        tempData=[];
+      }
+    }
+    else{
+      tempData=[];
+    }
+    document.getElementById(choosenMode+addi+':'+i+':'+j).innerHTML=createDic(i2,j,tempData,type)[0];
+  }
+  else if (type=="dic2"){
+    document.getElementById(choosenMode+addi+':'+i+':'+j).innerHTML=createDic(i2,j,tableHeadArray[choosenMode][j][2],type)[0];
+  }
+  else if (type=="id"){
+    document.getElementById(choosenMode+addi+':'+i+':'+j).innerHTML=createButton(i2,j);
+  }
+  else if (type=="normal"){
+    document.getElementById(choosenMode+addi+':'+i+':'+j).innerHTML=val;
+  }
+  if (type=="checkbox"){
+    if (val===1||val===true){
+      document.getElementById(choosenMode+addi+':'+i+':'+j).checked=true;
+    }
+    else{
+      document.getElementById(choosenMode+addi+':'+i+':'+j).checked=false;
+    }
+  }
+  else{
+    document.getElementById(choosenMode+addi+':'+i+':'+j).value=String(val);
+    if (!advancedMode && document.getElementById(choosenMode+addi+':'+i+':'+j).innerHTML==top.getText("edit",0)+'...'){
+      if (String(val)!==""){
+        $(document.getElementById(choosenMode+addi+':'+i+':'+j)).addClass("green");
+      }
+      else{
+        $(document.getElementById(choosenMode+addi+':'+i+':'+j)).removeClass("green");
+      }
+    }
+  }
+}
+
+function dragStart(event){
+  if (dragStarted==false){
+    startId=event.currentTarget.id;
+    if (dragline=="line" || dragline=="jine"){
+      getTable(true,false);
+      startId=parseInt(startId.split(":")[startId.split(":").length-1],10);
+    }
+    else if (dragline=="Bine"||dragline=="Cine"){
+      startId=parseInt(startId.split(".")[1],10);
+      if (lineType=="commander"){
+        commanderReadOut(commanderSelected);
+      }
+      else if(lineType=="eventer"){
+        eventerReadOut(commanderSelected);
+      }
+      else if(lineType=="actioner"){
+        actionerReadOut(commanderSelected);
+      }
+      else if(lineType=="dynamicIDEditor"){
+        dynamicIDEditorReadOut();
+      }
+    }
+    dragStarted=true;
+    overPosA=startId;
+    event.preventDefault();
+    /*if (event.type=="touchstart"){
+      pos=event.originalEvent.touches[0].pageY;
+    }
+    else{
+      pos=event.pageY;
+    }*/
+  }
+}
+
+function dragEnd(){
+  if (dragStarted){
+    dragStarted=false;
+    $(document.getElementById(dragline+overPosA)).removeClass("dragging");
+    if (dragline=="Bine" && lineType=="BChooser"){
+      for (var i=0; i<chooserSelectedArray.length; i++){
+        chooserSelectedArray[i]=chooserSelectedArray2[i];
+      }
+    }
+  }
+}
+
+function cancel(event){
+  if (dragStarted==true){
+    dragStarted=false;
+    $(document.getElementById(dragline+overPosA)).removeClass("dragging");
+  }
+}
+
+function move(event){
+  if (dragStarted==true){
+    event.preventDefault();
+    var pos;//
+    if (event.type=="touchmove"){
+      pos=event.originalEvent.touches[0].pageY;
+    }
+    else{
+      pos=event.pageY;
+    }
+    var i=startId;
+    if (pos<$(document.getElementById(dragline+i)).offset().top){
+      while(pos<$(document.getElementById(dragline+i)).offset().top){
+        i--;
+      }
+    }
+    else if (pos>($(document.getElementById(dragline+i)).offset().top+$(document.getElementById(dragline+i)).height())){
+      while(pos>($(document.getElementById(dragline+i)).offset().top+$(document.getElementById(dragline+i)).height())){
+        i++;
+      }
+    }
+    dragging(i);
+    $(document.getElementById(dragline+i)).addClass("dragging");
+  }
+}
+//----------------------------------------dragAndDropEnd--------------------------------------//
+
+function createAPIDocu(){
+  var apiWindow = window.open("/systemTemplates/system/loading.html", "apiWindow", "toolbar=no,status=no,menubar=no,titlebar=no,width=800,height=600,location=no,scrollbars=yes");
+  var tempTable='<html><head><meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"><link href="/style/style.css" rel="stylesheet" type="text/css"></head><body><div><button class="p1 w1 default" style=";position:fixed;top:0px;right:0px;z-index:100;" onClick="document.location.href=\'#top\'"><img src="/img/up2.png"></button></div><table border="0" cellpadding="0" cellspacing="0"><tr><td><table style="color:black"><tr><td class="bigFont"><b>Index:</b></td></tr>';
+  for (var i=0; i<allDataArray["doku.json"].length; i++){
+    var thisData=allDataArray["doku.json"][i];
+    tempTable+='<tr><td id="i:'+i+':0"><a href="#'+thisData[0]+'">'+thisData[0]+'</a></td><td id="i:'+i+':1"><i>('+thisData[1]+')</i></td></tr>';
+  }
+  tempTable+='</table><br><br></td></tr>';
+  for (var i=0; i<allDataArray["doku.json"].length; i++){
+    var thisData=allDataArray["doku.json"][i];
+    tempTable+='<tr><td><table id="'+thisData[0]+'" class="doku">';
+    tempTable+='<tr><td id="'+i+':0:0" colspan="4" class="bigFont"></td></tr>';
+    tempTable+='<tr><td id="'+i+':100:0"></td><td id="'+i+':100:1" colspan="3"></td></tr>';
+    tempTable+='<tr><td id="'+i+':1:0"></td><td id="'+i+':1:1" colspan="3"></td></tr>';
+    tempTable+='<tr><td id="'+i+':2:0"></td><td id="'+i+':2:1" colspan="3"></td></tr>';
+    tempTable+='<tr><td id="'+i+':3:0"></td><td id="'+i+':3:1" colspan="3"></td></tr>';
+    tempTable+='<tr><td colspan="4"><br></td></tr>';
+    if (thisData[6]!=""){
+      try{
+        var tempData1=JSON.parse(thisData[6]);
+        tempTable+='<tr><td id="'+i+':4:0"></td><td id="'+i+':4:1"></td><td id="'+i+':4:2"></td><td id="'+i+':4:3"></td></tr>';
+        for (var j=0; j<tempData1.length; j++){
+          tempTable+='<tr><td id="'+i+':4:0:'+j+'"></td><td id="'+i+':4:1:'+j+'"></td><td id="'+i+':4:2:'+j+'"></td><td id="'+i+':4:3:'+j+'"></td></tr>';
+        }
+        tempTable+='<tr><td colspan="4"><br></td></tr>';
+      }
+      catch(e){}
+    }
+    if (thisData[7]!=""){
+      try{
+        tempData1=JSON.parse(thisData[7]);
+        for (var j=0; j<tempData1.length; j++){
+          tempTable+='<tr><td id="'+i+':5:0:'+j+'"></td><td id="'+i+':5:1:'+j+'" colspan="3"></td></tr>';
+          if (tempData1[j][1]!=""){
+            tempTable+='<tr><td id="'+i+':6:0:'+j+'"></td><td id="'+i+':6:1:'+j+'" colspan="3"></td></tr>';
+          }
+        }
+      }
+      catch(e){}
+    }
+    tempTable+='</table><br></td></tr>';
+  }
+  tempTable+='</table><br><table id="ostates" style="color:black"><tr><td class="bigFont" colspan="2"><b>O-MEGA States:</b></td></tr>';
+  for (var i=0; i<allDataArray["statesCfg.json"].length; i++){
+    var thisData=allDataArray["statesCfg.json"][i];
+    if (thisData[3]==0){
+      if (dict["statesCfg.json"][thisData[0]][0].indexOf("<img src")!=-1){
+        tempTable+='<tr><td>'+thisData[0]+'</td><td>= '+dict["statesCfg.jsonshort"][thisData[0]][0]+'</td></tr>';
+      }
+      else{
+        tempTable+='<tr><td>'+thisData[0]+'</td><td>= '+dict["statesCfg.json"][thisData[0]][0]+'</td></tr>';
+      }
+    }
+  }
+  tempTable+='<tr><td>[all]</td><td>= Alias for all states above</td></tr>';
+  tempTable+='<tr><td>[numbers]</td><td>= Alias for all numeric states above</td></tr>';
+  tempTable+='<tr><td>[none]</td><td>= No state(s)</td></tr>';
+  tempTable+='</table><br></body></html>';
+  apiWindow.document.write(tempTable);
+  apiWindow.document.close();
+  for (var i=0; i<allDataArray["doku.json"].length; i++){
+    var thisData=allDataArray["doku.json"][i];
+    apiWindow.document.getElementById(i+":0:0").innerHTML="<b>"+thisData[0]+"</b>";
+    apiWindow.document.getElementById(i+":100:0").innerHTML="<b>"+top.getText("devframe","type",0)+":</b>";
+    apiWindow.document.getElementById(i+":100:1").innerHTML=thisData[1];
+    apiWindow.document.getElementById(i+":1:0").innerHTML="<b>"+top.getText("devframe","syntax",0)+":</b>";
+    apiWindow.document.getElementById(i+":1:1").innerHTML=thisData[2];
+    apiWindow.document.getElementById(i+":2:0").innerHTML="<b>"+top.getText("devframe","description",0)+":</b>";
+    apiWindow.document.getElementById(i+":2:1").innerHTML=thisData[3];
+    apiWindow.document.getElementById(i+":3:0").innerHTML="<b>"+top.getText("devframe","returns",0)+":</b>";
+    apiWindow.document.getElementById(i+":3:1").innerHTML="("+thisData[4]+") "+thisData[5];
+    if (thisData[6]!=""){
+      try{
+        var tempData1=JSON.parse(thisData[6]);
+        apiWindow.document.getElementById(i+":4:0").innerHTML="<b>"+top.getText("devframe","parameters",0)+":</b>";
+        apiWindow.document.getElementById(i+":4:1").innerHTML="<b>"+top.getText("devframe","type",0)+":</b>";
+        apiWindow.document.getElementById(i+":4:2").innerHTML="<b>"+top.getText("devframe","defaultValue",0)+":</b>";
+        apiWindow.document.getElementById(i+":4:3").innerHTML="<b>"+top.getText("devframe","description",0)+":</b>";
+        for (var j=0; j<tempData1.length; j++){
+          var tempData=tempData1[j];
+          var tempData2=tempData[0]+'<br>';
+          if (tempData[1]){
+            tempData2+='(Required)';
+          }
+          else{
+            tempData2+='(Optional)';
+          }
+          apiWindow.document.getElementById(i+":4:0:"+j).innerHTML=tempData2;
+          apiWindow.document.getElementById(i+":4:1:"+j).innerHTML=tempData[2];
+          apiWindow.document.getElementById(i+":4:2:"+j).innerHTML=tempData[3];
+          tempData2=tempData[5];
+          if (tempData[4]){
+            tempData2+='<br><br><b>'+top.getText("devframe","possibleValues",0)+':</b>';
+            tempData[4]=tempData[4].split(";");
+            for (var k=0; k<tempData[4].length; k++){
+              tempData2+='<br>'+tempData[4][k];
+            }
+          }
+          apiWindow.document.getElementById(i+":4:3:"+j).innerHTML=tempData2;
+        }
+      }
+      catch(e){}
+    }
+    if (thisData[7]!=""){
+      try{
+        tempData1=JSON.parse(thisData[7]);
+        for (var j=0; j<tempData1.length; j++){
+          apiWindow.document.getElementById(i+":5:0:"+j).innerHTML="<b>"+top.getText("devframe","example",0)+' '+(j+1)+':</b>';
+          apiWindow.document.getElementById(i+":5:1:"+j).innerHTML=tempData1[j][0];
+          if (tempData1[j][1]!=""){
+            apiWindow.document.getElementById(i+":6:1:"+j).innerHTML="<b>"+top.getText("devframe","returns",0)+':</b> '+tempData1[j][1];
+          }
+        }
+      }
+      catch(e){}
+    }
+  }
+}
+
+omega.OnUpdate(function(ext){
+  if (ext=="load" && advancedMode && !devframeLoaded){
+    top.alertBox(top.getText("devframeMessages","disclaimer"),dataLoad);
+  }
+  else if (ext=="load" || ext=="reload"){
+    getTable(true,true);
+    tablePrint();
+  }
+});
+
+omega.OnLoad(function(){
+  if (!top.user["parameters"]["isAdmin"]){
+    omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+    top.openPage("dashboard");
+  }
+  else if (!advancedMode){
+    dataLoad({OK:true});
+  }
+});
+
+</script>
+
+</head>
+
+<body>
+<table border="0" cellpadding="0" cellspacing="0">
+    <tr valign="top" class="title"><td><br></td></tr>
+    <tr valign="top">
+      <td id="tableM" style="width:1px;"><div id="chooserT"></div></td>
+      <td id="table1"><div id="content1"></div></td>
+      <td id="table2" style="display:none;"><div id="content2"></div></td>
+    </tr>
+</table>
+</body>
+</html>

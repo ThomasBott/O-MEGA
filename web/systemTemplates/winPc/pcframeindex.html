@@ -1,0 +1,137 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<title>PC</title>
+<link href="/style/style.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="/scripts/jquery.js"></script>
+<script type="text/javascript" src="/scripts/jquery.nicescroll.js"></script>
+<script type="text/javascript" src="/scripts/localFunctions.js"></script>
+<script type="text/javascript">
+
+var audioInterfaces=[];
+var audioInterfacesNames={};
+for (var i=0; i<top.interfaces.length; i++){
+  if (top.interfaces[i][3]==omega.deviceID && top.interfaces[i][1]=="Audio_Out"){
+    audioInterfaces.push(top.interfaces[i][0]);
+    //var tempName=top.interfaces[i][2]["displayName"];
+    var tempName=top.interfaces[i][0];
+    if (typeof top.text["interfaces.jsonnames"][tempName]!="undefined"){
+      tempName=top.text["interfaces.jsonnames"][tempName];
+    }
+    audioInterfacesNames[top.interfaces[i][0]]=tempName;
+  }
+}
+
+function getAudio(){
+  for (var i=0; i<audioInterfaces.length;i++){
+    var tempString='<button class="p1 w2 ';
+    if(audioInterfaces[i]==top.States["devices"][omega.deviceID]["audioEndpoint"]){
+      tempString+='green" ';
+    }
+    else if("#"+audioInterfaces[i]==top.States["devices"][omega.deviceID]["audioEndpoint"]){
+      tempString+='yellow" ';
+    }
+    else{
+      tempString+='default" ';
+    }
+    tempString+='onClick="omega.TriggerAction({lable:\''+top.getText('output',0)+'\',command:\'audioEndpoint\',targetState:\'[value]\',targetValue:[\''+audioInterfaces[i]+'\'],possibleStates:audioInterfaces,statesDict:audioInterfacesNames});">'+audioInterfacesNames[audioInterfaces[i]]+'</button>';
+    document.getElementById("0:"+(i+1)+"A").innerHTML=tempString;
+  }
+}
+
+var minVol="0";
+var maxVol="100";
+var stepVol="0.01";
+var hifivol;
+var hifimute;
+function vole(ext){
+  hifivol=top.States["devices"][omega.deviceID]["volume"];
+  hifimute=top.States["devices"][omega.deviceID]["mute"];
+  var temp='<center>'+hifivol+' %</center>';
+  document.getElementById('volume').innerHTML =temp;
+  var muteStr;
+  var muteTargetState;
+  if (hifimute=="[on]"){
+    muteStr='<button class="p1 w2 red" ';
+    muteTargetState="[off]";
+  }
+  else{
+    muteStr='<button class="p1 w2 default" ';
+    muteTargetState="[on]";
+  }
+  document.getElementById('MuteB').innerHTML =muteStr+'onClick="omega.TriggerAction({lable:top.getText(\'mute\',0),command:\'mute\',targetState:\''+muteTargetState+'\',possibleStates:omega.ON_OFF,multi:true});"><img src="/img/mute1.gif" /></button>';
+}
+
+omega.OnUpdate(function(ext){
+  vole(ext);
+  getAudio();
+});
+
+omega.OnLoad(function(){
+    omega.OnMenuHide(function(){document.getElementById('masterVolT').innerHTML='<button id="masterVolTitle" class="p2 w2 defaultNH">'+top.getText('volume',1)+':</button>'; document.getElementById("masterVolT").colSpan=1;});
+    omega.OnMenuShow(function(){document.getElementById('masterVolT').innerHTML='<button id="masterVolTitle" class="p2 w4 defaultNH">'+top.getText('volume',1)+':</button>'; document.getElementById("masterVolT").colSpan=2;});
+    omega.CreateModeMenu({targetId:'modeContent',showStates:true,maxCols:4});
+    if (audioInterfaces.length>0){
+      document.getElementById('audioEndpointTitleB').innerHTML='<button class="p2 w2 defaultNH">'+top.getText('audioEndpoint',0)+':</button>';
+    }
+    omega.ApplyHandlerRepeat({targetId:"volumeUp",eventData:{command:"volume",targetState:"[up]"}});
+    omega.ApplyHandlerRepeat({targetId:"volumeDown",eventData:{command:"volume",targetState:"[down]"}});
+    omega.ApplyHandlerMouseWheel({targetId:"volume",eventData:{command:"volume"}});
+});
+
+</script>
+</head>
+<body>
+  <table class="menuTable" cellpadding="0" cellspacing="0">
+    <tr class="shrinkH">
+      <td class="noBorder p1" valign="top"></td>
+    </tr>
+    <tr>
+      <td>
+        <div id="modeContent"></div>
+        <table border="0" cellpadding="0" cellspacing="3">
+          <tr class="HSpace"></tr>
+          <tr>
+            <td id="masterVolT" colspan="2"></td>
+          </tr>
+          <tr>
+            <td><button id="volume" class="p1 w2 default" onClick="omega.ShowNumberBox({lable:top.getText('volume',1),command:'volume',preset:hifivol,min:minVol,max:maxVol,step:stepVol,selectedObject:this});"></button></td>
+            <td class="hideThis"><button id="volumeUp" class="p1 w2 default"><img src="/img/up2.png" /></button></td>
+          </tr>
+          <tr>
+            <td id="MuteB"><button class="p1 w2 default"></button></td>
+            <td class="hideThis"><button id="volumeDown" class="p1 w2 default"><img src="/img/down2.png" /></button></td>
+          </tr>
+          <tr class="HSpace medium"></tr>
+          <tr>
+            <td id="audioEndpointTitleB"><button class="p2 w2 transparentNH"></button></td>
+            <td class="hideThis" id="0:0B"></td>
+          </tr>
+          <tr>
+            <td id="0:1A"></td>
+            <td class="hideThis" id="0:1B"></td>
+          </tr>
+          <tr>
+            <td id="0:2A"></td>
+            <td class="hideThis" id="0:2B"></td>
+          </tr>
+          <tr>
+            <td id="0:3A"></td>
+            <td class="hideThis" id="0:3B"></td>
+          </tr>
+          <tr>
+            <td id="0:4A"></td>
+            <td class="hideThis" id="0:4B"></td>
+          </tr>
+          <tr>
+            <td id="0:5A"></td>
+            <td class="hideThis" id="0:5B"></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
