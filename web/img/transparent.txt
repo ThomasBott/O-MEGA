@@ -1,0 +1,7 @@
+transparent:
+	color:ffffff
+	alpha:64
+
+transparent1:
+	color:ffffff
+	alpha:44
