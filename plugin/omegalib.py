@@ -12,7 +12,7 @@ import psutil
 from time import sleep
 
 #lib
-LIB_VERSION=1.16
+LIB_VERSION=1.17
 
 SYSTEM_TEMPLATES=["winpc","winpcbrowser","winpcbrowser2","winpcmousekeyboard","default1","default2","defaultMenu1","defaultMenu2","changeUser","guiSettings","executeCommand","configuration"]
 SYSTEM_EXTENSIONS=["PC_WIN","Ping","Generic_Prog","Pseudo_Device"]
@@ -150,21 +150,22 @@ def makeBackup():
 def cleanBackup(maxAgeInDays):
     timestamp = datetime.datetime.now()
     backupdir = getOmegaHome() + "\\backups"
-    oldBackups = os.listdir(backupdir)
     deleted = []
-    for file in oldBackups:
-        filePath = os.path.join(backupdir,file)
-        fileParts = file.split("_")
-        if os.path.isfile(filePath) and len(fileParts)==3:
-            oldTimeData=fileParts[1]
-            oldTimestamp=datetime.datetime.strptime(oldTimeData,"%Y-%m-%d")
-            delta=timestamp-oldTimestamp
-            if delta.days>maxAgeInDays:
-                try:
-                    os.remove(filePath)
-                    deleted.append("Deleted "+file)
-                except OSError:
-                    deleted.append("ERROR Could not delete "+file)
+    if os.path.exists(backupdir):
+        oldBackups = os.listdir(backupdir)
+        for file in oldBackups:
+            filePath = os.path.join(backupdir,file)
+            fileParts = file.split("_")
+            if os.path.isfile(filePath) and len(fileParts)==3:
+                oldTimeData=fileParts[1]
+                oldTimestamp=datetime.datetime.strptime(oldTimeData,"%Y-%m-%d")
+                delta=timestamp-oldTimestamp
+                if delta.days>maxAgeInDays:
+                    try:
+                        os.remove(filePath)
+                        deleted.append("Deleted "+file)
+                    except OSError:
+                        deleted.append("ERROR Could not delete "+file)
     return deleted
 		
 def getInstalledTemplates():
