@@ -78,7 +78,7 @@ from traceback import print_exc
 eg.RegisterPlugin(
     name = "O-MEGA",
     author = "Sem;colon",
-    version = "0.4.9",
+    version = "0.4.10",
     kind = "other",
     description = u"""Home Automation Web-interface for EventGhost""",
     createMacrosOnAdd = False,
@@ -4145,16 +4145,17 @@ class LogWrapper():
                         tempPCID=".".join(suffparts[2:-1])
                         id=u"devices/"+tempPCID+u"/power"
                         oldState=self.plugin.buttonStates[id]["state"]
-                        self.plugin.buttonStates[id]["state"]="#[on]"
-                        self.plugin.States["devices"][tempPCID]["power"]="#[on]"
-                        self.plugin.incrementHash("devices")
-                        self.plugin.incrementHash("buttons")
-                        eg.TriggerEvent(prefix="O-EVT", suffix="Button.State."+id+".#[on]",payload={"id":id,"new":"#[on]","old":oldState})
-                        thread = Thread(
-                            target=self.plugin.connectClientPC,
-                            args=(tempPCID, )
-                        )
-                        thread.start()
+                        if oldState!="[on]":
+                            self.plugin.buttonStates[id]["state"]="#[on]"
+                            self.plugin.States["devices"][tempPCID]["power"]="#[on]"
+                            self.plugin.incrementHash("devices")
+                            self.plugin.incrementHash("buttons")
+                            eg.TriggerEvent(prefix="O-EVT", suffix="Button.State."+id+".#[on]",payload={"id":id,"new":"#[on]","old":oldState})
+                            thread = Thread(
+                                target=self.plugin.connectClientPC,
+                                args=(tempPCID, )
+                            )
+                            thread.start()
                 elif suffparts[0]=="ClientPC" and suffparts[1]=="Connected":
                     self.plugin.updateDataFromClientPC(event.payload)
                 else:
@@ -4509,15 +4510,15 @@ class LogWrapper():
             if oldstate=="#"+targetState:
                 wx.CallAfter(eg.plugins.System.PowerDown,True)
             else:
-                #eg.scheduler.AddTask(1.0,eg.plugins.System.PowerDown,False)
-                wx.CallAfter(eg.plugins.System.PowerDown,False)
+                eg.scheduler.AddTask(1.0,eg.plugins.System.PowerDown,False)
+                #wx.CallAfter(eg.plugins.System.PowerDown,False)
         elif targetState=="[restart]":
             print "O-MEGA: PC will restart now!"
             if oldstate=="#"+targetState:
                 wx.CallAfter(eg.plugins.System.Reboot,True)
             else:
-                #eg.scheduler.AddTask(1.0,eg.plugins.System.Reboot,False)
-                wx.CallAfter(eg.plugins.System.Reboot,False)
+                eg.scheduler.AddTask(1.0,eg.plugins.System.Reboot,False)
+                #wx.CallAfter(eg.plugins.System.Reboot,False)
         elif targetState=="[standby]":
             print "O-MEGA: PC will go to standby now!"
             eg.plugins.System.Standby(False)
@@ -4733,10 +4734,10 @@ class RequestData(eg.ActionBase):
     def __call__(self,destIP, destPort ,passwd , data):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.settimeout(30.0)
+        sock.settimeout(5.0)
         
         sock.connect((destIP, destPort))
-        #sock.settimeout(180.0)
+        sock.settimeout(180.0)
         # First wake up the server, for security reasons it does not
         # respond by it self it needs this string, why this odd word ?
         # well if someone is scanning ports "connect" would be very 
