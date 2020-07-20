@@ -667,7 +667,8 @@ function vole(ext){
     if (typeof filesTargetArray["devices/"+primHifiID]!="undefined"){
         var hifivol=States["devices"][primHifiID]["volume"];
         var hifimute=States["devices"][primHifiID]["mute"];
-        var hifistate=allIndexDataGroupArray[files[filesTargetArray["devices/"+primHifiID][0]][0]];
+        //var hifistate=allIndexDataGroupArray[files[filesTargetArray["devices/"+primHifiID][0]][0]];
+        var hifistate=States["devices"][primHifiID]["power"];
         if (volumeOld!=hifivol+hifistate+hifimute || ext=="load"){
           volumeOld=hifivol+hifistate+hifimute;
           if (hifimute=="[on]"){
@@ -2158,7 +2159,7 @@ function sceneAddCondition(end){
   sceneRecordCondition.push(choosenSceneConditionState);
   TINY.box.hide();
   if (end){
-    recordDataArray.push([JSON.stringify(sceneRecordCondition),sceneSelectedLevel,1,getText('if',0)+sceneRecordLable+createSceneLable()+":"]);
+    recordDataArray.push([JSON.stringify(sceneRecordCondition),sceneSelectedLevel,1,""]);//getText('if',0)+sceneRecordLable+createSceneLable()+":"
     sceneRecordEnd(true,sceneRecording);
   }
 }

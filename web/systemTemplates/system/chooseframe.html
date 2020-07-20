@@ -174,13 +174,16 @@ function sceneLoad(ext){
                 if (top.chooseframehide==1){
                   sceneContainerContent+=' style="display:none;"';
                 }
-                sceneContainerContent+='><div id="sceneState'+i+'"></div></td>';
                 if (top.user["parameters"]["isSceneEditor"] && top.scenesIds[i][7]==0){
+                    sceneContainerContent+='><div id="sceneState'+i+'"></div></td>';
                     sceneContainerContent+='<td class="last hideThis"';
                     if (top.chooseframehide==1){
                       sceneContainerContent+=' style="display:none;"';
                     }
                     sceneContainerContent+='><button class="p1 w1 defaultNH Hred" onClick="top.submitBox(top.getText(\'sceneRemove\',0)+\'<br>('+sceneButtonName(tempId)+')\',function(o){top.sceneRemove(o.OK,'+tempId+')});">-</button></td>';
+                }
+                else{
+                    sceneContainerContent+=' colspan="2"><div id="sceneState'+i+'"></div></td>';
                 }
                 sceneContainerContent+='</tr><tr class="hideThis"';
                 if (top.chooseframehide==1){
@@ -193,13 +196,16 @@ function sceneLoad(ext){
                 if (top.chooseframehide==1){
                   sceneContainerContentHidden+=' style="display:none;"';
                 }
-                sceneContainerContentHidden+='><div id="sceneState'+i+'"></div></td>';
                 if (top.user["parameters"]["isSceneEditor"] && top.scenesIds[i][7]==0){
+                    sceneContainerContentHidden+='><div id="sceneState'+i+'"></div></td>';
                     sceneContainerContentHidden+='<td class="last hideThis"';
                     if (top.chooseframehide==1){
                       sceneContainerContentHidden+=' style="display:none;"';
                     }
                     sceneContainerContentHidden+='><button class="p1 w1 defaultNH Hred" onClick="top.submitBox(top.getText(\'sceneRemove\',0)+\'<br>('+sceneButtonName(tempId)+')\',function(o){top.sceneRemove(o.OK,'+tempId+')});">-</button></td>';
+                }
+                else{
+                    sceneContainerContentHidden+=' colspan="2"><div id="sceneState'+i+'"></div></td>';
                 }
                 sceneContainerContentHidden+='</tr><tr class="hideThis"';
                 if (top.chooseframehide==1){

@@ -14,6 +14,8 @@ var eventData;
 var onOffMapping=["[on]","[off]"];
 var onOffMapping1={1:"[on]",0:"[off]"};
 var activeStopMapping=["[activate]","[stop]"];
+var settingsMappings={"title":1,"activeStop":2,"hideScene":3,"executionIndex":4,"retriggerBehaviour":5,"onStart":6,"lockScene":7,"views":8};
+var settings =[];
 var oldScene=-1;
 var tempEventData=[];
 var sceneTitle;
@@ -34,11 +36,12 @@ omega.OnUpdate(function(ext){
     }};
     omega.Request(tempCommand);
   }
-  if (top.scenesIds[top.scenesFind[i]][1]==""){
+  settings = top.scenesIds[top.scenesFind[i]];
+  if (settings[settingsMappings["title"]]==""){
     sceneTitle=top.getText('files.json',omega.pageID)+'&nbsp;'+(i+1);
   }
   else{
-    sceneTitle=top.scenesIds[top.scenesFind[i]][1];
+    sceneTitle=settings[settingsMappings["title"]];
   }
   if (oldScene!=i){
     omega.PAGE_TITLE=sceneTitle+':<br>('+omega.pageID+i+')';
@@ -46,7 +49,7 @@ omega.OnUpdate(function(ext){
   }
   oldScene=i;
   onOff(top.scenes[top.scenesFindData[i]][0]);
-  activeStop(top.scenesIds[top.scenesFind[i]][2]);
+  activeStop(settings[settingsMappings["activeStop"]]);
   var tempArr=top.sceneMetadata(i);
   var dayWeekMonth="";
   var starttime=top.scenes[top.scenesFindData[i]][3][0];
@@ -116,7 +119,12 @@ function onOff(state){
     else{
       tempString+='default" ';
     }
-    tempString+='onClick="omega.TriggerAction({lable:\''+top.getText('scene',0)+':'+sceneTitle+'\',command:\'sceneOnOff\',targetState:\''+onOffMapping[j]+'\',data:'+top.sceneChoosen+',possibleStates:[1,0],statesDict:onOffMapping1,variable:tempSceneName,preSelectIndex:'+j+'});"';
+    if (settings[settingsMappings["lockScene"]]==1){
+        tempString+='onClick="omega.ShowAlertBox({text:omega.GetText({text:\'accessDenied\'})+\'!\'});"';
+    }
+    else{
+        tempString+='onClick="omega.TriggerAction({lable:\''+top.getText('scene',0)+':'+sceneTitle+'\',command:\'sceneOnOff\',targetState:\''+onOffMapping[j]+'\',data:'+top.sceneChoosen+',possibleStates:[1,0],statesDict:onOffMapping1,variable:tempSceneName,preSelectIndex:'+j+'});"';
+    }
     document.getElementById("0"+(j+1)+"B").innerHTML=tempString+'>'+top.getText('statesCfg.json',onOffMapping[j])+'</button>';
   }
 }

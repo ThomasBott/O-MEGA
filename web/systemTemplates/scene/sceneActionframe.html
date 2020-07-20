@@ -21,6 +21,7 @@ var startType;
 var notMoved=true;
 var endOfCondition;
 var endOfConditionTotal;
+var settingsMappings = parent.settingsMappings;
 
 //----------------------------------------dragAndDropStart--------------------------------------//
 
@@ -139,6 +140,10 @@ function shiftCells(i,i2){
 
 function dragStart(event){
   if (dragStarted==false){
+    if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
+        omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
+        return false;
+    }
     notMoved=true;
     dragStarted=true;
     startId=event.currentTarget.id;
@@ -422,7 +427,7 @@ function openEditor1(i){
 }
 
 function openEditor(i){
-  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
     omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
     return false;
   }
@@ -491,7 +496,7 @@ function closeText(i){
 }
 
 function removeF(i){
-  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
     omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
     return false;
   }
@@ -533,7 +538,7 @@ function removeCondition(i,all){
 }
 
 function clearAll(){
-  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
     omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
     return false;
   }
@@ -542,17 +547,17 @@ function clearAll(){
 }
 
 function addActionsF(){
-  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
     omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
     return false;
   }
   $("#addActions").removeClass("default");
   $("#addActions").addClass("green");
-  TINY.box.show({html:'<center>'+top.getText('sceneMessages','forwardCommands')+'<br><br><table class="stdtable" cellpadding="0" cellspacing="0"><tr><td><button class="p1 w2 default" onClick="top.sceneRecordStart(top.sceneChoosen,true,newActions,false,true,selectedLine); TINY.box.hide();">'+top.getText('yes',0)+'+'+top.getText('recordPauses',0)+'</button></td><td><button class="p1 w2 default" onClick="top.sceneRecordStart(top.sceneChoosen,true,newActions,false,false,selectedLine); TINY.box.hide();">'+top.getText('yes',0)+'</button></td><td><button class="p1 w2 default" onClick="top.sceneRecordStart(top.sceneChoosen,false,newActions,false,false,selectedLine); TINY.box.hide();">'+top.getText('no',0)+'</button></td></tr></table></center>',maskid:'whitemask',opacity:30,animate:false,close:false,closejs:function(){$("#addActions").removeClass("green"); $("#addActions").addClass("default");}});
+  TINY.box.show({html:'<center>'+top.getText('sceneMessages','forwardCommands')+'<br><br><table class="stdtable" cellpadding="0" cellspacing="0"><tr><td><button class="p1 w2 default" onClick="top.sceneRecordStart(top.sceneChoosen,true,newActions,false,true,selectedLine); oldActions=newActions; TINY.box.hide();">'+top.getText('yes',0)+'+'+top.getText('recordPauses',0)+'</button></td><td><button class="p1 w2 default" onClick="top.sceneRecordStart(top.sceneChoosen,true,newActions,false,false,selectedLine); oldActions=newActions; TINY.box.hide();">'+top.getText('yes',0)+'</button></td><td><button class="p1 w2 default" onClick="top.sceneRecordStart(top.sceneChoosen,false,newActions,false,false,selectedLine); oldActions=newActions; TINY.box.hide();">'+top.getText('no',0)+'</button></td></tr></table></center>',maskid:'whitemask',opacity:30,animate:false,close:false,closejs:function(){$("#addActions").removeClass("green"); $("#addActions").addClass("default");}});
 }
 
 function addConditionF(){
-  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
     omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
     return false;
   }
@@ -570,7 +575,7 @@ function unselectSelectedLine(o){
 }
 
 function addElseToCondition(i){
-  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
     omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
     return false;
   }
@@ -586,7 +591,7 @@ function addElseToCondition(i){
 }
 
 function saveF(){
-  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
     omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
     return false;
   }
@@ -597,8 +602,8 @@ function saveF(){
 var wasActive=false;
 var executionIndex=0;
 function showProgress(){
-  if (top.scenesIds[top.scenesFind[top.sceneChoosen]][2]=="[activate]"){
-    executionIndex = top.scenesIds[top.scenesFind[top.sceneChoosen]][4];
+  if (top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["activeStop"]]=="[activate]"){
+    executionIndex = top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["executionIndex"]];
     wasActive=true;
     for (var i=0; i<=executionIndex; i++){
       $(document.getElementById("p"+i)).addClass("green");
@@ -617,6 +622,18 @@ var oldScene=-1;
 omega.OnUpdate(function(ext){
   //console.log("load"+ext);
   if (ext=="reload" || ext=="load" && oldScene!=top.sceneChoosen){
+    if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
+        document.getElementById("okB").innerHTML = '';
+        document.getElementById("clearB").innerHTML = '';
+        document.getElementById("addConditionB").innerHTML = '';
+        document.getElementById("addActionsB").innerHTML = '';
+    }
+    else{
+        document.getElementById("okB").innerHTML = '<button class="p1 w2 default Hgreen" onClick="saveF();">'+top.getText('saveChanges',0)+'</button>';
+        document.getElementById("clearB").innerHTML = '<button class="p1 w2 default Hred" onClick="clearAll();">'+top.getText('clearSettings',0)+'</button>';
+        document.getElementById("addConditionB").innerHTML = '<button class="p1 default Hgreen" style="width:100%" onClick="addConditionF();">+ '+top.getText('addCondition',0)+'</button>';
+        document.getElementById("addActionsB").innerHTML = '<button id="addActions" class="p1 default Hgreen" style="width:100%" onClick="addActionsF();">+ '+top.getText('addActions',0)+'</button>';
+    }
     oldScene=top.sceneChoosen;
     var command={'method':'getSceneActions','args':[top.sceneChoosen],'callback':function(data){
       if (!data){
@@ -644,13 +661,6 @@ omega.OnLoad(function(){
     else{
       backClass="transparent1";
     }
-    if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
-        return false;
-    }
-    document.getElementById("okB").innerHTML = '<button class="p1 w2 default Hgreen" onClick="saveF();">'+top.getText('saveChanges',0)+'</button>';
-    document.getElementById("clearB").innerHTML = '<button class="p1 w2 default Hred" onClick="clearAll();">'+top.getText('clearSettings',0)+'</button>';
-    document.getElementById("addConditionB").innerHTML = '<button class="p1 default Hgreen" style="width:100%" onClick="addConditionF();">+ '+top.getText('addCondition',0)+'</button>';
-    document.getElementById("addActionsB").innerHTML = '<button id="addActions" class="p1 default Hgreen" style="width:100%" onClick="addActionsF();">+ '+top.getText('addActions',0)+'</button>';
     $("#content").on("touchend", dragEnd).on("touchmove", move).on("touchleave", cancel).on("mouseup", dragEnd).on("mousemove", move).on("mouseleave", cancel);
     omega.OnBeforeUnload(function (){
       if (JSON.stringify(oldActions)!=JSON.stringify(newActions)){

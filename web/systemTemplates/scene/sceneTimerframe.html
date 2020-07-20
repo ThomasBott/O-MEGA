@@ -19,6 +19,7 @@ var aktiveDays;
 var aktiveWeeks;
 var aktiveWeekDays;
 var period;
+var settingsMappings = parent.settingsMappings;
 
 //----------------------startTimeStart----------------------//
 function timeChange(how,what){
@@ -627,6 +628,14 @@ var foundScene;
 var oldScene=-1;
 omega.OnUpdate(function(ext){
   if (ext=="reload" || ext=="load" && oldScene!=top.sceneChoosen){
+    if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
+        document.getElementById("okB").innerHTML = '';
+        document.getElementById("clearB").innerHTML = '';
+    }
+    else{
+        document.getElementById("okB").innerHTML = '<button class="p1 w2 default Hgreen" onClick="save();">'+top.getText('saveChanges',0)+'</button>';
+        document.getElementById("clearB").innerHTML = '<button class="p1 w2 default Hred" onClick="clearAll();">'+top.getText('clearSettings',0)+'</button>';
+    }
     oldScene=top.sceneChoosen;
     foundScene=top.scenesFindData[top.sceneChoosen];
     choosenMode=parseInt(top.scenes[foundScene][2]);
@@ -666,17 +675,12 @@ omega.OnLoad(function(){
     omega.ApplyHandlerRepeat({targetId:"periodChangerN1",func:function(){periodChange(-1);}});
     omega.OnBeforeUnload(function (){
       save(true);
-      if (top.user["parameters"]["isSceneEditor"] && top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==0 && JSON.stringify(newSched)!=JSON.stringify([parseInt(top.scenes[foundScene][0]),top.scenes[foundScene][1],top.scenes[foundScene][2],top.scenes[foundScene][3],top.scenes[foundScene][4],"O-CMD","sceneStart","",""+top.sceneChoosen])){
+      if (top.user["parameters"]["isSceneEditor"] && top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==0 && JSON.stringify(newSched)!=JSON.stringify([parseInt(top.scenes[foundScene][0]),top.scenes[foundScene][1],top.scenes[foundScene][2],top.scenes[foundScene][3],top.scenes[foundScene][4],"O-CMD","sceneStart","",""+top.sceneChoosen])){
         if (!confirm(omega.GetText('discardUnsavedSettings'))){
           return false;
         }
       }
     });
-    if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
-        return false;
-    }
-    document.getElementById("okB").innerHTML = '<button class="p1 w2 default Hgreen" onClick="save();">'+top.getText('saveChanges',0)+'</button>';
-    document.getElementById("clearB").innerHTML = '<button class="p1 w2 default Hred" onClick="clearAll();">'+top.getText('clearSettings',0)+'</button>';
 });
 
 </script>

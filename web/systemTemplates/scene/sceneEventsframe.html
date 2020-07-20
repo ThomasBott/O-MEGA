@@ -10,6 +10,7 @@
 <script type="text/javascript" src="/scripts/localFunctions.js"></script>
 <script type="text/javascript">
 
+var settingsMappings = parent.settingsMappings;
 
 var lastSelectedTextField;
 function changeSelectedTextField(element){
@@ -17,7 +18,7 @@ function changeSelectedTextField(element){
 }
 
 function insertEvent1(targetElement,justDo){
-  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
     omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
     return false;
   }
@@ -54,7 +55,7 @@ function printEventer(data){
 }
 
 function printEventerAddLine(){
-  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
     omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
     return false;
   }
@@ -64,7 +65,7 @@ function printEventerAddLine(){
 }
 
 function printEventerRemoveLine(j){
-  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
     omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
     return false;
   }
@@ -82,7 +83,7 @@ function eventerReadOut(){
 }
 
 function saveF(){
-  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
     omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
     return false;
   }
@@ -108,7 +109,7 @@ function saveF(){
 }
 
 function clearAll(){
-  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
+  if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
     omega.ShowAlertBox({text:omega.GetText({text:"accessDenied"})+"!"});
     return false;
   }
@@ -118,6 +119,16 @@ function clearAll(){
 var oldScene=-1;
 omega.OnUpdate(function(ext){
   if (ext=="reload" || ext=="load" && oldScene!=top.sceneChoosen){
+    if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][settingsMappings["lockScene"]]==1){
+        document.getElementById("okB").innerHTML = '';
+        document.getElementById("clearB").innerHTML = '';
+        document.getElementById("insertEventB").innerHTML = '';
+    }
+    else{
+        document.getElementById("okB").innerHTML = '<button class="p1 w2 default Hgreen" onClick="saveF();">'+top.getText('saveChanges',0)+'</button>';
+        document.getElementById("clearB").innerHTML = '<button class="p1 w2 default Hred" onClick="clearAll();">'+top.getText('clearSettings',0)+'</button>';
+        document.getElementById("insertEventB").innerHTML = '<button class="p1 w3 default" onClick="insertEvent1(false,true);">'+top.getText('insertEvent',0)+'</button>';
+    }
     oldScene=top.sceneChoosen;
     var command={'method':'loadActionEventsFor','args':[encodeURIComponent("eg.plugins.SchedulGhost.RunScheduleImmediately(u'scene"+top.sceneChoosen+"',True)")],'callback':function(data){
       if (!data){
@@ -142,12 +153,6 @@ omega.OnLoad(function(){
         }
       }
     });
-    if (!top.user["parameters"]["isSceneEditor"] || top.scenesIds[top.scenesFind[top.sceneChoosen]][7]==1){
-        return false;
-    }
-    document.getElementById("okB").innerHTML = '<button class="p1 w2 default Hgreen" onClick="saveF();">'+top.getText('saveChanges',0)+'</button>';
-    document.getElementById("clearB").innerHTML = '<button class="p1 w2 default Hred" onClick="clearAll();">'+top.getText('clearSettings',0)+'</button>';
-    document.getElementById("insertEventB").innerHTML = '<button class="p1 w3 default" onClick="insertEvent1(false,true);">'+top.getText('insertEvent',0)+'</button>';
 });
 
 </script>
