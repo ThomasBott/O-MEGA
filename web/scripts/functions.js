@@ -69,6 +69,488 @@ function registerClient(){
 }
 registerClient();
 
+//------------------------indexOldStart------------------------
+$.ajaxSetup({
+  type: "POST",
+  timeout: 7000
+});
+
+var dictLoaded=false;
+$.post("/config/dictionary.json","request", function(data){
+  if (typeof data === 'object'){
+    text2=data;
+  }
+  else{
+    text2=JSON.parse(data);
+  }
+  for (var attrname in text2) { text[attrname] = text2[attrname]; }
+  dictLoaded=true;
+  loadRest();
+});
+
+var filesLoaded=false;
+var files;
+$.post("/config/files.json","request", function(data){
+  if (typeof data === 'object'){
+    files=data;
+  }
+  else{
+    files=JSON.parse(data);
+  }
+  filesLoaded=true;
+  openPageInit();
+  loadRest();
+});
+
+var extensions;
+var extensionsIDArray={};
+var devices;
+var audioPlayerPCArray={};
+var supportedAudioPlayer=[];
+var primHifiID="";
+var PCIDsArray=[];
+var devicesIDArray={};
+var interfacesLoaded=false;
+var devicesLoaded=false;
+var interfaces;
+var interfacesIDArray={};
+var user={"id":"default"};
+var users;
+var usersIDArray={};
+var views;
+var viewsIDArray={};
+var viewChoosen="";
+var viewRecording="-";
+$.post("/config/extensionsCfg.json","request", function(data){
+  if (typeof data === 'object'){
+    extensions=data;
+  }
+  else{
+    extensions=JSON.parse(data);
+  }
+  for (var i=0; i<extensions.length; i++){
+    extensionsIDArray[extensions[i][0]]=i;
+    try{
+      var tempArr=JSON.parse(extensions[i][4]);
+      extensions[i][4]={}
+      for (var y=0; y<tempArr.length; y++){
+        extensions[i][4][tempArr[y][0]]=tempArr[y][1];
+      }
+      if (typeof extensions[i][4]["mediaPlayer"]!="undefined" && extensions[i][4]["mediaPlayer"]=="1"){
+        supportedAudioPlayer.push(extensions[i][0]);
+      }
+    }
+    catch(e){
+      extensions[i][4]={};
+    }
+  }
+  $.post("/config/devices.json","request", function(data){
+    if (typeof data === 'object'){
+      devices=data;
+    }
+    else{
+      devices=JSON.parse(data);
+    }
+    for (var i=0; i<devices.length; i++){
+      devicesIDArray[devices[i][0]]=i;
+      if (typeof filesTargetArray["devices/"+devices[i][0]]=="undefined"){
+        filesTargetArray["devices/"+devices[i][0]] = [];
+      }
+      try{
+        devices[i][2]=$.extend({},extensions[extensionsIDArray[devices[i][1]]][4],JSON.parse(devices[i][2]));
+      }
+      catch(e){
+        devices[i][2]=extensions[extensionsIDArray[devices[i][1]]][4];
+      }
+      if (devices[i][1]=="PC_WIN"){
+        PCIDsArray.push(i);
+        audioPlayerPCArray[devices[i][0]]=[];
+      }
+    }
+    for (var i=0; i<devices.length; i++){
+      if (typeof devices[i][2]["mediaPlayer"]!="undefined" && devices[i][2]["mediaPlayer"]=="1"){
+        if (typeof audioPlayerPCArray[devices[i][3]]!="undefined"){
+          audioPlayerPCArray[devices[i][3]].push(i);
+        }
+      }
+    }
+    devicesLoaded=true;
+    loadPrograms();
+  });
+  $.post("/config/interfaces.json","request", function(data){
+    if (typeof data === 'object'){
+      interfaces=data;
+    }
+    else{
+        interfaces=JSON.parse(data);
+    }
+    for (var i=0; i<interfaces.length; i++){
+      interfacesIDArray[interfaces[i][0]]=i;
+      try{
+        interfaces[i][2]=$.extend({},extensions[extensionsIDArray[interfaces[i][1]]][4],JSON.parse(interfaces[i][2]));
+      }
+      catch(e){
+        interfaces[i][2]=extensions[extensionsIDArray[interfaces[i][1]]][4];
+      }
+    }
+    interfacesLoaded=true;
+    loadRest();
+  });
+});
+
+var programsLoaded=false;
+var programs;
+var programsIDArray={};
+function loadPrograms(){
+  $.post("/config/programs.json","request", function(data){
+    if (typeof data === 'object'){
+      programs=data;
+    }
+    else{
+      programs=JSON.parse(data);
+    }
+    for (var i=0; i<programs.length; i++){
+      programsIDArray[programs[i][0]]=i;
+      try{
+        programs[i][2]=$.extend({},extensions[extensionsIDArray[programs[i][1]]][4],JSON.parse(programs[i][2]));
+      }
+      catch(e){
+        programs[i][2]=extensions[extensionsIDArray[programs[i][1]]][4];
+      }
+      if (typeof programs[i][2]["mediaPlayer"]!="undefined" && programs[i][2]["mediaPlayer"]=="1"){
+        if (typeof audioPlayerPCArray[programs[i][3]]!="undefined"){
+            audioPlayerPCArray[programs[i][3]].push(i);
+        }
+      }
+    }
+    programsLoaded=true;
+    loadRest();
+  });
+}
+
+var statesLoaded=false;
+var states;
+var statesIDArray={};
+$.post("/config/statesCfg.json","request", function(data){
+  if (typeof data === 'object'){
+    states=data;
+  }
+  else{
+    states=JSON.parse(data);
+  }
+  for (var i=0; i<states.length; i++){
+    statesIDArray[states[i][0]]=i;
+  }
+  statesLoaded=true;
+  loadRest();
+});
+
+var userSettingsLoaded=false;
+var userSettings;
+var userSettings1;
+var userSettingsDevice;
+var userSettingsDeviceAll;
+$.post("/config/users.json","request", function(data){
+    if (typeof data === 'object'){
+      users=data;
+    }
+    else{
+      users=JSON.parse(data);
+    }
+    for (var i=0; i<users.length; i++){
+      usersIDArray[users[i][0]]=i;
+    }
+    if (typeof localStorage.user != 'undefined'){
+      var temp=JSON.parse(localStorage.user);
+      if (temp["id"]=="default" || typeof usersIDArray[temp["id"]]!="undefined" && $.md5(temp["pw"])==users[usersIDArray[temp["id"]]][1]){
+        user["id"]=temp["id"];
+      }
+      else{
+        showErrorBox("login failed!");
+      }
+    }
+    user["views"]=users[usersIDArray[user["id"]]][2];
+    if (typeof user["views"] !== 'object' || user["views"].length==1 && user["views"][0]==""){
+        user["views"]=[];
+    }
+    try{
+        user["parameters"]=JSON.parse(users[usersIDArray[user["id"]]][3]);
+    }
+    catch(e){
+        user["parameters"]={};
+    }
+    if (typeof user["parameters"]["isSceneEditor"]=="undefined"){
+        user["parameters"]["isSceneEditor"]=0;
+    }
+    if (typeof user["parameters"]["isAdmin"]=="undefined"){
+        user["parameters"]["isAdmin"]=0;
+    }
+    else if(user["parameters"]["isAdmin"]==1){
+        user["parameters"]["isSceneEditor"]=1;
+    }
+    $.post("/config/userSettings.json","request", function(data){
+      if (typeof data === 'object'){
+        userSettings1=data;
+      }
+      else{
+        userSettings1=JSON.parse(data);
+      }
+      if (typeof localStorage.userSettings === 'undefined'){
+        userSettingsDeviceAll={}
+      }
+      else{
+        userSettingsDeviceAll=JSON.parse(localStorage.userSettings);
+      }
+      if (typeof userSettings1[user["id"]]=="undefined"){
+        userSettings1[user["id"]]={};
+      }
+      userSettings1=userSettings1[user["id"]];
+      if (typeof userSettings1["dashData"]=="undefined"){
+        userSettings1["dashData"]={};
+      }
+      var tempTypes=["devices","programs"];
+      for (var type in tempTypes){
+        if (typeof userSettings1[tempTypes[type]]=="undefined"){
+          userSettings1[tempTypes[type]]={};
+        }
+      }
+      userSettings=JSON.parse(JSON.stringify(userSettings1));
+      if (typeof userSettingsDeviceAll[user["id"]]=="undefined"){
+        userSettingsDeviceAll[user["id"]]={};
+      }
+      userSettingsDevice=userSettingsDeviceAll[user["id"]];
+      for (var setting in userSettings){
+        if (userSettings[setting]+""=="[deviceSetting]"){
+          delete userSettings[setting];
+          if (typeof userSettingsDevice[setting]!="undefined"){
+            userSettings[setting]=userSettingsDevice[setting];
+          }
+        }
+      }
+      if (typeof userSettings["language"]=="undefined"){
+        userSettings["language"]=0;
+      }
+      else{
+        userSettings["language"]=parseInt(userSettings["language"]);
+      }
+      if (typeof userSettings["advancedConfig"]=="undefined"){
+        userSettings["advancedConfig"]=false;
+      }
+      if (typeof userSettings["useFullscreen"]=="undefined"){
+        userSettings["useFullscreen"]=false;
+      }
+      if (typeof userSettings["startFullscreen"]=="undefined"){
+        userSettings["startFullscreen"]=false;
+      }
+      if (typeof userSettings["lockDashboard"]=="undefined"){
+        userSettings["lockDashboard"]=false;
+      }
+      if (typeof userSettings["backgroundPath"]=="undefined"){
+        userSettings["backgroundPath"]="background.jpg";
+      }
+      if (typeof userSettings["effectTimePage"]=="undefined"){
+        userSettings["effectTimePage"]=400;
+      }
+      else{
+        userSettings["effectTimePage"]=parseInt(userSettings["effectTimePage"]);
+      }
+      if (typeof userSettings["effectTimeSlide"]=="undefined"){
+        userSettings["effectTimeSlide"]=200;
+      }
+      else{
+        userSettings["effectTimeSlide"]=parseInt(userSettings["effectTimeSlide"]);
+      }
+      var tempTypes=["devices","programs"];
+      for (var type in tempTypes){
+        for (var device in userSettings[tempTypes[type]]){
+          for (var setting in userSettings[tempTypes[type]][device]){
+            if (userSettings[tempTypes[type]][device][setting]+""=="[deviceSetting]"){
+              delete userSettings[tempTypes[type]][device][setting];
+              if (typeof userSettingsDevice[tempTypes[type]]!="undefined" && typeof userSettingsDevice[tempTypes[type]][device]!="undefined" && typeof userSettingsDevice[tempTypes[type]][device][setting]!="undefined"){
+                userSettings[tempTypes[type]][device][setting]=userSettingsDevice[tempTypes[type]][device][setting];
+              }
+            }
+          }
+        }
+      }
+      if (typeof userSettings["defaultView"]=="undefined"){
+        userSettings["defaultView"]="-";
+      }
+      if (typeof userSettings["dashReturnTimeout"]=="undefined" || !userSettings["dashReturnTimeout"]){
+        userSettings["dashReturnTimeout"]=0;
+      }
+      else if (userSettings["dashReturnTimeout"]<10){
+        userSettings["dashReturnTimeout"]=10;
+      }
+      userSettingsLoaded=true;
+      $.post("/config/views.json","request", function(data){
+        if (typeof data === 'object'){
+          views=data;
+        }
+        else{
+          views=JSON.parse(data);
+        }
+        if (user["parameters"]["isAdmin"]==1){
+          user["views"].push("-");
+        }
+        viewChoosen=user["views"][0];
+        var tempWindowHash=window.location.hash;
+        for (var i=0; i<user["views"].length; i++){
+          if (tempWindowHash=="#view"+user["views"][i]){
+            viewChoosen=user["views"][i];
+            break;
+          }
+          else if (user["views"][i]==userSettings["defaultView"]){
+            viewChoosen=userSettings["defaultView"];
+          }
+        } 
+        for (var i=0; i<views.length; i++){
+          viewsIDArray[views[i][0]]=i;
+          if(views[i][0]==viewChoosen){
+            primHifiID=views[i][1];
+          }
+        }
+        viewsLoaded=true;
+        loadRest();
+      });
+    });
+});
+
+var loadRestNotLoaded=true;
+function loadRest(){
+  if (loadRestNotLoaded&&filesLoaded&&indexLoaded&&dictLoaded&&interfacesLoaded&&programsLoaded&&statesLoaded&&userSettingsLoaded&&chooseFrameLoaded&&topFrameLoaded&&viewsLoaded&&devicesLoaded){
+    loadRestNotLoaded=false;
+    reloadF("load");
+    hifiInit();
+    document.getElementById('topframe').style.height=(topframeHeight-3)+"px";
+    //document.getElementById('standAlone').style.height=(standAloneHeight+3)+"px";
+    //window.frames["topframe"].StartUp2();
+    //window.frames["chooseframe"].StartUp2();
+    framesetPrinter();
+    $(document.getElementById('topframehide')).slideDown(top.userSettings["effectTimeSlide"],loadRest2());
+    if (top.userSettings["backgroundPath"]!=""){
+      $(document.body).addClass("backgroundImage");
+      $(document.body).css("background-image","url(/img/background/"+top.userSettings["backgroundPath"]+")");
+    }
+  }
+}
+
+function loadRest2(){
+  openPage('dashboard',false,userSettings["startFullscreen"]);
+  if (!userSettings["startFullscreen"]){
+    hidechooseframeall(0,true);
+  }
+}
+
+//-----------mainframeStart---------------//
+var menuHide={"chooseframe":1};
+if (globalWindowWidth>=650){
+  menuHide["chooseframe"]=0;
+}
+
+function hidechooseframeall(hide,effect) {
+  effect=effect||false;
+  element="controlsC";
+  if (hide==1){
+    if (effect){
+      $(document.getElementById(element)).hide(top.userSettings["effectTimeSlide"]);
+    }
+    else{
+      $(document.getElementById(element)).hide(0);
+    }
+  }
+  else {
+    if (effect){
+      $(document.getElementById(element)).show(top.userSettings["effectTimeSlide"],function(){hidechooseframe(menuHide["chooseframe"]);});
+    }
+    else{
+      $(document.getElementById(element)).show(0,function(){hidechooseframe(menuHide["chooseframe"]);});
+    }
+  }
+}
+
+function hidechooseframe(hide,target) {
+  target=target||-1;
+  var element=document.getElementById("controlsC");
+  if (hide==1 && menuHide["chooseframe"]==0){
+    if (target==-1){
+      target=82;
+    }
+    menuHide["chooseframe"]=1;
+    window.frames["chooseframe"].document.getElementById('hideB').innerHTML='<button class="p1 w2 transparent" onClick="top.hidechooseframe(0);">&gt;&gt;</button>';
+    window.setTimeout('window.frames["chooseframe"].hide('+hide+');',top.userSettings["effectTimeSlide"]);
+  }
+  else if (hide==0) {
+    if (target==-1){
+      target=164;
+    }
+    menuHide["chooseframe"]=0;
+    window.frames["chooseframe"].document.getElementById('hideB').innerHTML='<button class="p1 w2 default" onClick="top.hidechooseframe(1);">&lt;&lt;</button>';
+    window.frames["chooseframe"].hide(hide);
+  }
+  else{
+    if (target==-1){
+      target=82;
+    }
+    menuHide["chooseframe"]=1;
+    window.frames["chooseframe"].document.getElementById('hideB').innerHTML='<button class="p1 w2 transparent" onClick="top.hidechooseframe(0);">&gt;&gt;</button>';
+    window.frames["chooseframe"].hide(hide);
+  }
+  element.style.transition="width "+top.userSettings["effectTimeSlide"]+"ms";
+  element.style.width=target+"px";
+}
+
+
+//-----------mainframeEnd---------------//
+
+function framesetPrinter(){
+  thisFramesArray = [];
+  var framesstr='<table class="frameTable" border="0" cellpadding="0" cellspacing="0"><tr>';
+  for (var i=0; i<files.length; i++){
+    var tempFile=files[i];
+    if ((tempFile[1]=="-" || tempFile[1]=="hide") && thisFramesArray.indexOf(tempFile[6])==-1){
+      thisFramesArray.push(tempFile[6]);
+      framesstr+='<td class="subFrames" style="display:none;" id="'+tempFile[6]+'"><iframe style="height:100%; width:100%; margin-bottom:-3px;" name="'+tempFile[6]+'" frameborder="0" allowtransparency="true"></iframe></td>';
+    }
+  }
+  document.getElementById("allframe").innerHTML=framesstr+'<td class="subFrames" id="dummyC" style="display:none;"><br></td></tr></table>';
+}
+
+var indexLoaded=false;
+var responseShowerElement;
+function StartUp(){
+  document.addEventListener("fullscreenchange", fullscreenChanged, false);
+  document.addEventListener("mozfullscreenchange", fullscreenChanged, false);
+  document.addEventListener("webkitfullscreenchange", fullscreenChanged, false);
+  document.addEventListener("MSFullscreenChange", fullscreenChanged, false);
+  indexLoaded=true;
+  loadRest();
+  window.onpagehide = function(){
+    $.post("/empty",JSON.stringify({"method":"unregisterClient",args:[thisIP]}));
+    for (var i=0; i<browserInstanceNrs.length; i++){
+      $.post("/empty",JSON.stringify({"method":"browserClose","args":[browserInstanceNrs[i][0],browserInstanceNrs[i][1]]}));
+    }
+    console.log("unloaded O-MEGA");
+  };
+  /*window.onbeforeunload = function(){
+    $.post("/empty",JSON.stringify({"method":"unregisterClient",args:[thisIP]}));
+    for (var i=0; i<browserInstanceNrs.length; i++){
+      $.post("/empty",JSON.stringify({"method":"browserClose","args":[browserInstanceNrs[i][0],browserInstanceNrs[i][1]]}));
+    }
+    return "Are you sure?";
+  };*/
+  responseShowerElement=document.getElementById("responseShower");
+}
+
+function rotate(){
+  setTimeout('getGlobalWindowSize();',350);
+}
+
+function resize(){
+  getGlobalWindowSize();
+}
+//------------------------indexOldEnd--------------------------
+
 function dateTransform(day,month,year){
   if (userSettings["language"]==1){
     return day+"."+month+"."+year;
@@ -1643,7 +2125,7 @@ function fullscreen(onOff,id){
       }
       else if(onOff==2){
         $(document.getElementById("fullscreenLeaver")).show();
-        $(document.getElementById("backButton")).show(top.userSettings["effectTimeSlide"]);
+        //$(document.getElementById("backButton")).show(top.userSettings["effectTimeSlide"]);
         $(top.frames["topframe"].document.getElementById("fullscreenLeaver")).show();
         fullFullscreen(1);
       }
@@ -2760,7 +3242,10 @@ function Request(eventname,time,shadow,lable){
       if (recording==false || forwardCommands){
         $(responseShowerElement).show();
         $.post("/empty",JSON.stringify(tevent))
-          .always(function(){
+          .fail(function(data) {
+            Request(eventname,false,shadow,lable);
+          })
+          .done(function(){
             clearTimeout(responseTimeout);
             responseTimeout=setTimeout(function(){$(responseShowerElement).hide();},50);
           });
@@ -2788,10 +3273,13 @@ function Request(eventname,time,shadow,lable){
       dashGoer=false;
       $(responseShowerElement).show();
       $.post("/empty",JSON.stringify(tevent))
-        .always(function(){
-          clearTimeout(responseTimeout);
-          responseTimeout=setTimeout(function(){$(responseShowerElement).hide();},50);
-        });
+          .fail(function(data) {
+            Request(eventname,false,shadow,lable);
+          })
+          .done(function(){
+            clearTimeout(responseTimeout);
+            responseTimeout=setTimeout(function(){$(responseShowerElement).hide();},50);
+          });
     }
     resetDashReturnTimeout();
   }
