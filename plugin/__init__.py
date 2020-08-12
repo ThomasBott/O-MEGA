@@ -78,7 +78,7 @@ from traceback import print_exc
 eg.RegisterPlugin(
     name = "O-MEGA",
     author = "Sem;colon",
-    version = "0.4.10",
+    version = "0.4.11",
     kind = "other",
     description = u"""Home Automation Web-interface for EventGhost""",
     createMacrosOnAdd = False,
@@ -5739,14 +5739,14 @@ class MyHTTPRequestHandler(SimpleHTTPRequestHandler):
             pass
 
 
-    def handle_one_request(self):
+    """def handle_one_request(self):
         try:
             SimpleHTTPRequestHandler.handle_one_request(self)
         except Exception, exc:
             eg.PrintError(
                 "Webserver: Exception on handle_one_request:",
                 unicode(exc)
-            )
+            )"""
 
 
     def version_string(self):
