@@ -63,6 +63,7 @@ from eg.WinApi.Dynamic import GetCursorPos, POINT
 from win32com.client import Dispatch
 from inspect import getsourcelines
 #from copy import copy
+from HTMLParser import HTMLParser
 
 from ssl import wrap_socket, CERT_NONE
 from posixpath import splitext, normpath
@@ -78,7 +79,7 @@ from traceback import print_exc
 eg.RegisterPlugin(
     name = "O-MEGA",
     author = "Sem;colon",
-    version = "0.4.11",
+    version = "0.5.9",
     kind = "other",
     description = u"""Home Automation Web-interface for EventGhost""",
     createMacrosOnAdd = False,
@@ -98,12 +99,10 @@ class Text:
     importB = "Save config and Import"
     exportB = "Export"
     importExportBox = "Templates and Extensions"
-    action  = "Action"
     targetState = "Target State"
     targetType = "Target Type"
     variable= "Variable"
     value   = "Value"
-    view    = "View context"
     optional= "Optional"
     targetDeviceId = "Target Device ID"
     targetButtonId = "Target Button ID"
@@ -181,6 +180,7 @@ class OMEGA(eg.PluginBase):
         self.pluginServer = False
         self.serverOnline = False
         self.registeredWebFunctions={}
+        self.uml=HTMLParser()
         if self.readFromReg("server")=="1":
             self.pluginServer = True
             #self.actionValues={}
@@ -196,6 +196,7 @@ class OMEGA(eg.PluginBase):
             self.RegisterWebFunction(self.getFilesForDropdown,"getFilesForDropdown")
             self.RegisterWebFunction(self.sceneSaveActions,"sceneSaveActions")
             self.RegisterWebFunction(self.saveUserSettings,"saveUserSettings")
+            self.RegisterWebFunction(self.getUserSettings,"getUserSettings")
             self.RegisterWebFunction(self.sceneCheckCondition,"sceneCheckCondition")
             self.RegisterWebFunction(self.getSceneActions,"getSceneActions")
             self.RegisterWebFunction(self.saveActionEventsFor,"saveActionEventsFor")
@@ -248,6 +249,7 @@ class OMEGA(eg.PluginBase):
         self.AddAction(GetValue, hidden=True)
         #self.AddAction(RequestData, hidden=True)
         self.AddAction(ActiveMedia)
+        self.AddAction(InterpretSpokenCommand,"InterpretSpokenCommand","Interpret Spoken Command","Interprets a spoken command and executes determined actions",None)
         typeGroup = self.AddGroup(
             "Extension Creation / Scripting",
             "Functions that help you with the creation of O-MEGA Extensions or if you like to do some scripting."
@@ -620,6 +622,7 @@ class OMEGA(eg.PluginBase):
         self.createActionEventCategories()
         #=========================actionEvents End==============================
         #=========================statesCfg Start===============================
+        statesReset=False
         try:
             file=codecs.open(self.configDir+u'\\web\\config\\statesCfg.json','r',eg.systemEncoding)
             self.statesCfg=json.load(file)
@@ -631,12 +634,28 @@ class OMEGA(eg.PluginBase):
                 pass
             self.statesCfg=defaultConfig.statesCfg()
             self.saveConfig(self.statesCfg,u'statesCfg.json',False)
-        self.validStates=[]
-        invalidStates=["[set]","[numbers]","[all]"]
+            statesReset=True
+        self.validStates=["[none]","[error]","[?]"]
         for state in self.statesCfg:
-            if state[0] not in invalidStates:
+            if not state[3] and state[0] not in self.validStates:
                 self.validStates.append(state[0])
         #=========================statesCfg End==================================
+        #=========================mediaCfg Start===============================
+        try:
+            file=codecs.open(self.configDir+u'\\web\\config\\mediaCfg.json','r',eg.systemEncoding)
+            self.mediaCfg=json.load(file)
+            file.close()
+        except:
+            try:
+                file.close()
+            except:
+                pass
+            self.mediaCfg=defaultConfig.mediaCfg()
+            self.saveConfig(self.mediaCfg,u'mediaCfg.json',False)
+        self.mediaCfgIDArray={}
+        for i in xrange(len(self.mediaCfg)):
+            self.mediaCfgIDArray[self.mediaCfg[i][0]]=i
+        #=========================mediaCfg End==================================
         #=========================views Start====================================
         try:
             file=codecs.open(self.configDir+u'\\web\\config\\views.json','r',eg.systemEncoding)
@@ -647,7 +666,7 @@ class OMEGA(eg.PluginBase):
                 if view[0]=="-":
                     defaultViewMissing=False
             if defaultViewMissing:
-                self.views.append(["-", "-"])
+                self.views.append(["-", "-", 0])
                 self.saveConfig(self.views,u'views.json',False)
         except:
             try:
@@ -659,8 +678,11 @@ class OMEGA(eg.PluginBase):
         self.viewsIDArray={}
         for i in xrange(len(self.views)):
             self.viewsIDArray[self.views[i][0]]=i
+            if len(self.views[i])==2:
+                self.views[i].append(0)
         #=========================views End=====================================
         #=========================users Start====================================
+        self.spokenCommandCache={}
         try:
             file=codecs.open(self.configDir+u'\\web\\config\\users.json','r',eg.systemEncoding)
             self.users=json.load(file)
@@ -674,6 +696,7 @@ class OMEGA(eg.PluginBase):
                     tempData = json.loads(user[3])
                     if "isAdmin" in tempData and tempData["isAdmin"]:
                         adminMissing=False
+                self.spokenCommandCache[user[0]]={"lastCommand":""}
             if defaultUserMissing:
                 self.users.append(["default", "", [], "{\"isAdmin\":1,\"isSceneEditor\":1}"])
                 self.saveConfig(self.users,u'users.json',False)
@@ -688,8 +711,15 @@ class OMEGA(eg.PluginBase):
             self.users=defaultConfig.users()
             self.saveConfig(self.users,u'users.json',False)
         self.usersIDArray={}
+        changedSomething=False
         for i in xrange(len(self.users)):
             self.usersIDArray[self.users[i][0]]=i
+            for y in reversed(xrange(len(self.users[i][2]))):
+                if self.users[i][2][y] not in self.viewsIDArray:
+                    self.users[i][2].pop(y)
+                    changedSomething=True
+        if changedSomething:
+            self.saveConfig(self.users,u'users.json',False)
         #=========================users End=====================================
         #=========================files Start===================================
         try:
@@ -703,16 +733,6 @@ class OMEGA(eg.PluginBase):
                 pass
             self.files=defaultConfig.files()
             self.saveConfig(self.files,u'files.json',False)
-        try:
-            file=codecs.open(self.configDir+u'\\web\\config\\dictionary.json','r',eg.systemEncoding)
-            tmp=json.load(file)
-            file.close()
-        except:
-            try:
-                file.close()
-            except:
-                pass
-            self.saveConfig(defaultConfig.dictionary(self.thisPcName),u'dictionary.json',False)
         try:
             file=codecs.open(self.configDir+u'\\web\\config\\templatesCfg.json','r',eg.systemEncoding)
             tmp=json.load(file)
@@ -783,12 +803,14 @@ class OMEGA(eg.PluginBase):
         self.buttonInterestingStates = {}
         self.hashs["buttons"]=1
         tempFilesIDList=[]
+        self.buttonViewsForPage={}
         for y in self.files:
             tempFilesIDList.append(y[0])
         i=0
         z=0
         while i<len(self.files):
             self.filesIDArray[self.files[i][0]]=i
+            self.buttonViewsForPage[self.files[i][0]]=False
             try:
                 tempButtons=json.loads(self.files[i][5])
             except:
@@ -802,9 +824,12 @@ class OMEGA(eg.PluginBase):
                     if y[0]==tempParent:
                         tempParent=y[1]
                         break
-            if self.files[i][2]!="-" and (self.files[i][2] not in self.primaryFilesTarget or primaryFilesTargetLevel>pageLevel):
-                self.primaryFilesTarget[self.files[i][2]]=i
-                primaryFilesTargetLevel=pageLevel
+            if self.files[i][2]!="-":
+                if self.files[i][2] not in self.primaryFilesTarget or primaryFilesTargetLevel>pageLevel:
+                    self.primaryFilesTarget[self.files[i][2]]=[i]
+                    primaryFilesTargetLevel=pageLevel
+                elif primaryFilesTargetLevel==pageLevel:
+                    self.primaryFilesTarget[self.files[i][2]].append(i)
             try:
                 self.files[i][4]=json.loads(self.files[i][4])
                 tmpKeys=self.files[i][4].keys()
@@ -816,17 +841,21 @@ class OMEGA(eg.PluginBase):
             if len(tempButtons)>0:
                 while j<len(tempButtons):
                     target=tempButtons[j][1]
+                    id=str(self.files[i][0]+"/"+tempButtons[j][0])
+                    try:
+                        tempButtons[j][5]=json.loads(tempButtons[j][5])
+                    except:
+                        tempButtons[j][5]={}
+                    try:
+                        tempButtons[j][6]=json.loads(tempButtons[j][6])
+                    except:
+                        tempButtons[j][6]={}
+                    try:
+                        tempButtons[j][7]=json.loads(tempButtons[j][7])
+                    except:
+                        tempButtons[j][7]={}
                     if target!="macro" or tempButtons[j][2]!="copy":#target!="frontend"
-                        id=str(self.files[i][0]+"/"+tempButtons[j][0])
-                        target=target.split("/")
-                        try:
-                            tempButtons[j][5]=json.loads(tempButtons[j][5])
-                        except:
-                            tempButtons[j][5]={}
-                        try:
-                            tempButtons[j][6]=json.loads(tempButtons[j][6])
-                        except:
-                            tempButtons[j][6]={}
+                        #target=target.split("/")
                         if id not in self.buttonStates:
                             self.buttonStates[id]={"state":"[?]","value":"?"}
                         if tempButtons[j][6]!={}:
@@ -847,12 +876,49 @@ class OMEGA(eg.PluginBase):
                         else:
                             if id in self.buttonStates:
                                 del self.buttonStates[id]
-                        self.buttons.append(tempButtons[j])
-                        self.buttonsIDArray[id]=z
-                        z+=1
+                    while len(tempButtons[j])<10:
+                        tempButtons[j].append("")
+                    for y in reversed(xrange(len(tempButtons[j][9]))):
+                        if tempButtons[j][9][y] not in self.viewsIDArray:
+                            tempButtons[j][9].pop(y)
+                    if len(tempButtons[j][9])>0:
+                        self.buttonViewsForPage[self.files[i][0]]=True
+                    else:
+                        tempButtons[j][9]=[[""]]
+                    self.buttons.append(tempButtons[j])
+                    self.buttonsIDArray[id]=z
+                    z+=1
                     j+=1
+            self.files[i][5]=tempButtons
+            for y in reversed(xrange(len(self.files[i][10]))):
+                if self.files[i][10][y] not in self.viewsIDArray:
+                    self.files[i][10].pop(y)
             i+=1
         #============================files End==================================
+        #=========================dictionary Start==============================
+        try:
+            file=codecs.open(self.configDir+u'\\web\\config\\dictionary.json','r',eg.systemEncoding)
+            self.dictionary=json.load(file)
+            file.close()
+        except:
+            try:
+                file.close()
+            except:
+                pass
+            self.dictionary=defaultConfig.dictionary(self.thisPcName)
+            self.saveConfig(self.dictionary,u'dictionary.json',False)
+        else:
+            if statesReset:
+                tempDict=defaultConfig.dictionary(self.thisPcName)
+                self.dictionary["statesCfg.json"]=tempDict["statesCfg.json"]
+                self.dictionary["statesCfg.jsonshort"]=tempDict["statesCfg.jsonshort"]
+                self.dictionary["statesCfg.jsonvoice"]=tempDict["statesCfg.jsonvoice"]
+                self.dictionary["statesCfg.jsonnames"]=tempDict["statesCfg.jsonnames"]
+                self.dictionary["mediaCfg.json"]=tempDict["mediaCfg.json"]
+                self.dictionary["mediaCfg.jsonvoice"]=tempDict["mediaCfg.jsonvoice"]
+                self.dictionary["mediaCfg.jsonnames"]=tempDict["mediaCfg.jsonnames"]
+                self.saveConfig(self.dictionary,u'dictionary.json',False)
+        #=========================dictionary End================================
         #============================extensions Start===========================
         try:
             file=codecs.open(self.configDir+u'\\web\\config\\extensionsCfg.json','r',eg.systemEncoding)
@@ -958,8 +1024,13 @@ class OMEGA(eg.PluginBase):
                 else:
                     tempDict[temp[0]]=temp[3]
             try:
-                data[i][2]=dict(self.extensions[self.extensionsIDArray[data[i][1]]][4].items()+tempDict.items()+json.loads(data[i][2]).items())
-            except:
+                temp=self.merge_two_dicts(self.extensions[self.extensionsIDArray[data[i][1]]][4],tempDict)
+                if data[i][2]=="":
+                    data[i][2]=temp
+                else:
+                    data[i][2]=self.merge_two_dicts(temp,json.loads(data[i][2]))
+            except Exception, err:
+                eg.PrintError("O-MEGA: Failed to load settings for device: "+data[i][0]+". %s" % str(err))
                 data[i][2]=self.extensions[self.extensionsIDArray[data[i][1]]][4]
             if data[i][1]=="PC_WIN":
                 if data[i][0] not in self.States["devices"]:
@@ -971,18 +1042,28 @@ class OMEGA(eg.PluginBase):
                     self.saveMac(data[i][0],self.thisPcMac)
                 else:
                     self.Ping.Ping(data[i][2]["host"],u'PC.'+data[i][0])
-            if "maxOnTime" not in data[i][2]:
+            if "maxOnTime" not in data[i][2] or data[i][2]["maxOnTime"]=="":
                 data[i][2]["maxOnTime"]="5.0"
-            if "maxOnRetry" not in data[i][2]:
+            if "maxOnRetry" not in data[i][2] or data[i][2]["maxOnRetry"]=="":
                 data[i][2]["maxOnRetry"]="3"
-            if "maxOffTime" not in data[i][2]:
+            if "maxOffTime" not in data[i][2] or data[i][2]["maxOffTime"]=="":
                 data[i][2]["maxOffTime"]="10.0"
-            if "maxOffRetry" not in data[i][2]:
+            if "maxOffRetry" not in data[i][2] or data[i][2]["maxOffRetry"]=="":
                 data[i][2]["maxOffRetry"]="3"
-            if "masterAudio" in data[i][2] and data[i][2]["masterAudio"]=="1":
+            if "masterAudio" in data[i][2] and (data[i][2]["masterAudio"]=="1" or data[i][2]["masterAudio"]=="True"):
+                data[i][2]["masterAudio"]="1"
                 self.hifiDevices.append(data[i][0])
-            if "mediaPlayer" in data[i][2] and data[i][2]["mediaPlayer"]=="1":
-                self.mediaPlayers.append(["devices",data[i][0]])
+            else:
+                data[i][2]["masterAudio"]="0"
+            if "mediaPlayer" in data[i][2] and (data[i][2]["mediaPlayer"]=="1" or data[i][2]["mediaPlayer"]=="True"):
+                data[i][2]["mediaPlayer"]="1"
+                self.mediaPlayers.append("devices/"+data[i][0])
+            else:
+                data[i][2]["mediaPlayer"]="0"
+            if "forwardToMasterAudio" in data[i][2] and (data[i][2]["forwardToMasterAudio"]=="0" or data[i][2]["forwardToMasterAudio"]=="False"):
+                data[i][2]["forwardToMasterAudio"]="0"
+            else:
+                data[i][2]["forwardToMasterAudio"]="1"
             if data[i][0] not in self.States["devices"]:
                 self.States["devices"][data[i][0]] = {}
             pluginList+=self.extensions[self.extensionsIDArray[data[i][1]]][3]
@@ -1064,8 +1145,13 @@ class OMEGA(eg.PluginBase):
                 else:
                     tempDict[temp[0]]=temp[3]
             try:
-                data[i][2]=dict(self.extensions[self.extensionsIDArray[data[i][1]]][4].items()+tempDict.items()+json.loads(data[i][2]).items())
-            except:
+                temp=self.merge_two_dicts(self.extensions[self.extensionsIDArray[data[i][1]]][4],tempDict)
+                if data[i][2]=="":
+                    data[i][2]=temp
+                else:
+                    data[i][2]=self.merge_two_dicts(temp,json.loads(data[i][2]))
+            except Exception, err:
+                eg.PrintError("O-MEGA: Failed to load settings for interface: "+data[i][0]+". %s" % str(err))
                 data[i][2]=self.extensions[self.extensionsIDArray[data[i][1]]][4]
                 #if data[i][2]=={}:
                 #    data[i][2]=""
@@ -1102,21 +1188,34 @@ class OMEGA(eg.PluginBase):
                 else:
                     tempDict[temp[0]]=temp[3]
             try:
-                data[i][2]=dict(self.extensions[self.extensionsIDArray[data[i][1]]][4].items()+tempDict.items()+json.loads(data[i][2]).items())
-            except:
+                temp=self.merge_two_dicts(self.extensions[self.extensionsIDArray[data[i][1]]][4],tempDict)
+                if data[i][2]=="":
+                    data[i][2]=temp
+                else:
+                    data[i][2]=self.merge_two_dicts(temp,json.loads(data[i][2]))
+            except Exception, err:
+                eg.PrintError("O-MEGA: Failed to load settings for program: "+data[i][0]+". %s" % str(err))
                 data[i][2]=self.extensions[self.extensionsIDArray[data[i][1]]][4]
                 #if data[i][2]=={}:
                 #    data[i][2]=""
-            if "maxOnTime" not in data[i][2]:
+            if "maxOnTime" not in data[i][2] or data[i][2]["maxOnTime"]=="":
                 data[i][2]["maxOnTime"]="5.0"
-            if "maxOnRetry" not in data[i][2]:
+            if "maxOnRetry" not in data[i][2] or data[i][2]["maxOnRetry"]=="":
                 data[i][2]["maxOnRetry"]="1"
-            if "maxOffTime" not in data[i][2]:
+            if "maxOffTime" not in data[i][2] or data[i][2]["maxOffTime"]=="":
                 data[i][2]["maxOffTime"]="10.0"
-            if "maxOffRetry" not in data[i][2]:
+            if "maxOffRetry" not in data[i][2] or data[i][2]["maxOffRetry"]=="":
                 data[i][2]["maxOffRetry"]="1"
-            if "mediaPlayer" in data[i][2] and data[i][2]["mediaPlayer"]=="1":
-                self.mediaPlayers.append(["programs",data[i][0]])
+            data[i][2]["masterAudio"]="0"
+            if "mediaPlayer" in data[i][2] and (data[i][2]["mediaPlayer"]=="1" or data[i][2]["mediaPlayer"]=="True"):
+                data[i][2]["mediaPlayer"]="1"
+                self.mediaPlayers.append("programs/"+data[i][0])
+            else:
+                data[i][2]["mediaPlayer"]="0"
+            if "forwardToMasterAudio" in data[i][2] and (data[i][2]["forwardToMasterAudio"]=="0" or data[i][2]["forwardToMasterAudio"]=="False"):
+                data[i][2]["forwardToMasterAudio"]="0"
+            else:
+                data[i][2]["forwardToMasterAudio"]="1"
             if data[i][3] not in self.programsForPCsByType:
                 self.programsForPCsByType[data[i][3]]={}
             self.programsForPCsByType[data[i][3]][data[i][1]]=data[i][0]
@@ -1188,12 +1287,20 @@ class OMEGA(eg.PluginBase):
         self.hashs["scene"]=1
         self.hashs["sceneData"]=1
         self.sceneNamesIds={}
+        somethingChanged=False
         for i in xrange(len(self.sceneNames)):
             while len(self.sceneNames[i])<=7:
                 self.sceneNames[i].append(0)
             if len(self.sceneNames[i])==8:
                 self.sceneNames[i].append([])
+                somethingChanged=True
+            for y in reversed(xrange(len(self.sceneNames[i][8]))):
+                if self.sceneNames[i][8][y] not in self.viewsIDArray:
+                    self.sceneNames[i][8].pop(y)
+                    somethingChanged=True
             self.sceneNamesIds[self.sceneNames[i][0]]=i
+        if somethingChanged:
+            self.saveConfig(self.sceneNames,u'sceneNames.json',False)
         #============================sceneNames End=============================
         #============================sceneActions Start=========================
         try:
@@ -1220,7 +1327,8 @@ class OMEGA(eg.PluginBase):
                 pass
             self.userSettings = defaultConfig.userSettings()
             self.saveConfig(self.userSettings,u'userSettings.json',False)
-        self.cleanUserSettings()
+        if self.cleanUserSettings():
+            self.saveConfig(self.userSettings,u'userSettings.json',False)
         #============================userSettings End===========================
         self.createButtonResponseCategories()
         tmpKeys=self.buttonStates.keys()
@@ -1231,13 +1339,17 @@ class OMEGA(eg.PluginBase):
 
 
     def cleanUserSettings(self):
+        result=False
         tmpKeys=self.userSettings.keys()
         userIds=[]
         for user in self.users:
             userIds.append(user[0])
+            result=True
         for id in tmpKeys:
             if id not in userIds:
                 del self.userSettings[id]
+                result=True
+        return result
 
         
     def createButtonResponseCategories(self):
@@ -1327,6 +1439,12 @@ class OMEGA(eg.PluginBase):
                     catID2=2
                 if id not in self.actionEventCategories[catID1][catID2]:
                     self.actionEventCategories[catID1][catID2].append(id)
+    
+    
+    def merge_two_dicts(self,x, y):
+        z = x.copy()   # start with x's keys and values
+        z.update(y)    # modifies z with y's keys and values & returns None
+        return z
     
     
     def replaceVariableInText(self,oldText,target):
@@ -1621,20 +1739,30 @@ class OMEGA(eg.PluginBase):
     def saveStates(self):
         self.saveConfig(self.buttonStates,"buttonStates.json",False)
         for item in self.States["devices"].keys():
-            if item not in self.devicesIDArray.keys():
+            if item not in self.devicesIDArray:
                 del self.States["devices"][item]
         for item in self.States["programs"].keys():
-            if item not in self.programsIDArray.keys():
+            if item not in self.programsIDArray:
                 del self.States["programs"][item]
         self.saveConfig(self.States,"States.json",False)
             
     
-    def saveUserSettings(self, user,settings):
-        self.userSettings[unquote(user)]=json.loads(unquote(settings))
+    def saveUserSettings(self, user,setting,value):
+        if setting=="all":
+            self.userSettings[user]=value
+        else:
+            self.userSettings[user][setting]=value
         file=codecs.open(self.configDir+u'\\web\\config\\userSettings.json','w',eg.systemEncoding)
         json.dump(self.userSettings,file)
         file.close()
         return True
+        
+        
+    def getUserSettings(self, user,setting):
+        if setting=="all":
+            return self.userSettings[user]
+        else:
+            return self.userSettings[user][setting]
         
     
     def loadActionEventsFor(self, action):
@@ -2466,7 +2594,7 @@ class OMEGA(eg.PluginBase):
             if not self.LogWrapper.turnO(deviceprogid,tempEvent,"[on]",suffParts[0]):
                 return False
         if not interface or ("hifiId" in audioInterface[2] and audioInterface[2]["hifiId"] in self.hifiDevices):
-            id=self.primaryFilesTarget[suffParts[0]+'/'+deviceprogid]
+            id=self.primaryFilesTarget[suffParts[0]+'/'+deviceprogid][0]#!!!!!!!!!!!!!!!!
             thisFiles=self.files[id]
             primHifiID=""
             if interface:
@@ -2492,75 +2620,117 @@ class OMEGA(eg.PluginBase):
         return True
 
 
-    def ActiveMedia(self,action,targetState,view="-"):
-        if len(self.mediaPlayers)>0:
-            bestOne=[0,0]
-            i=-1
-            for item in self.mediaPlayers:
-                i+=1
-                value=0
-                thisFiles=None
-                thisFilesPrimButtonState=self.States[item[0]][item[1]][u"power"]
-                if item[0]=="devices":                    
-                    if item[0]+'/'+item[1] in self.primaryFilesTarget:
-                        thisFiles=self.files[self.primaryFilesTarget[item[0]+'/'+item[1]]]
-                elif item[0]=="programs":
-                    if 'devices/'+self.programs[self.programsIDArray[item[1]]][3] in self.primaryFilesTarget:                
-                        thisFiles=self.files[self.primaryFilesTarget['devices/'+self.programs[self.programsIDArray[item[1]]][3]]]
+    def ActiveMedia(self,action,targetState,view="",targetValue=""):
+        if action not in self.mediaCfgIDArray:
+            eg.PrintError("O-MEGA: '"+action+"' is not a valid media action!")
+            return False
+        items=[]
+        for device in self.primaryFilesTarget:
+            item=device.split("/")
+            for fileId in self.primaryFilesTarget[device]:
+                file=self.files[fileId]
+                targetValue2=targetValue
                 primHifiID=""
-                if thisFiles:
+                value=0
+                filePrimButtonState=self.States[item[0]][item[1]][u"power"]
+                if file[2] in self.mediaPlayers:
                     connectedHifis=[]
                     for hifiDevice in self.hifiDevices:
-                        if hifiDevice in thisFiles[4] and thisFiles[4][hifiDevice][0]!="":
+                        if hifiDevice in file[4] and file[4][hifiDevice][0]!="":
                             connectedHifis.append(hifiDevice)
                     if len(connectedHifis)==1:
                         primHifiID=connectedHifis[0]
                     elif len(connectedHifis)>1 and view in self.viewsIDArray and self.views[self.viewsIDArray[view]][1] in connectedHifis:
                         primHifiID=self.views[self.viewsIDArray[view]][1]
-                    if view != "-" and view in thisFiles[10]:
+                    if view != "" and view in file[10]:
                         value+=100
-                elif view in self.viewsIDArray:
-                    primHifiID=self.views[self.viewsIDArray[view]][1]
-                if primHifiID!="":
-                    primHiFiDevice=self.devices[self.devicesIDArray[primHifiID]]
-                    primHiFiDeviceState=self.States["devices"][primHiFiDevice[0]]
-                if thisFilesPrimButtonState=="[on]" or thisFilesPrimButtonState=="#[on]":
-                    value+=2
-                    if "play" in self.States[item[0]][item[1]] and "pause" in self.States[item[0]][item[1]]:
-                        if (self.States[item[0]][item[1]]["play"]=="[on]" or self.States[item[0]][item[1]]["play"]=="#[on]") and not (self.States[item[0]][item[1]]["pause"]=="[on]" or self.States[item[0]][item[1]]["pause"]=="#[on]"):
-                            value+=2
-                        elif self.States[item[0]][item[1]]["pause"]=="[on]" or self.States[item[0]][item[1]]["pause"]=="#[on]":
-                            value+=1
-                if thisFiles and (primHifiID!="" and (primHiFiDeviceState["power"]=="[on]" or primHiFiDeviceState["power"]=="#[on]")) and (primHifiID=="" or "input" not in primHiFiDeviceState or (primHiFiDevice[0] in thisFiles[4] and primHiFiDeviceState["input"] in thisFiles[4][primHiFiDevice[0]])):
-                    value+=5
-                elif thisFiles and (primHifiID=="" or "input" not in primHiFiDeviceState or (primHiFiDevice[0] in thisFiles[4] and primHiFiDeviceState["input"] in thisFiles[4][primHiFiDevice[0]])):
-                    value+=1
-                if value>bestOne[1]:
-                    bestOne[0]=i
-                    bestOne[1]=value
-                #print str(value)+" Media is: "+item[0]+u"/"+item[1]
-            item=self.mediaPlayers[bestOne[0]]
-            #print "Media is: "+item[0]+u"/"+item[1]
-            if action=="power":
-                thisFilesPrimButtonID=item[0]+u"/"+item[1]+u"/power"
-                if targetState != "[on]" and targetState != "[off]":
-                    thisFilesPrimButtonState=self.buttonStates[thisFilesPrimButtonID]["state"]
-                    if thisFilesPrimButtonState=="[on]" or thisFilesPrimButtonState=="#[on]":
-                        targetState="[off]"
+                    if primHifiID=="" and view in self.viewsIDArray:
+                        primHifiID=self.views[self.viewsIDArray[view]][1]
+                    primHiFiDevice=None
+                    if primHifiID!="":
+                        primHiFiDevice=self.devices[self.devicesIDArray[primHifiID]]
+                        primHiFiDeviceState=self.States["devices"][primHiFiDevice[0]]
+                    if filePrimButtonState=="[on]" or filePrimButtonState=="#[on]":
+                        value+=2
+                        if "play" in self.States[item[0]][item[1]] and "pause" in self.States[item[0]][item[1]]:
+                            if (self.States[item[0]][item[1]]["play"]=="[on]" or self.States[item[0]][item[1]]["play"]=="#[on]") and not (self.States[item[0]][item[1]]["pause"]=="[on]" or self.States[item[0]][item[1]]["pause"]=="#[on]"):
+                                value+=2
+                            elif self.States[item[0]][item[1]]["pause"]=="[on]" or self.States[item[0]][item[1]]["pause"]=="#[on]":
+                                value+=1
+                    if (primHifiID!="" and (primHiFiDeviceState["power"]=="[on]" or primHiFiDeviceState["power"]=="#[on]")) and (primHifiID=="" or "input" not in primHiFiDeviceState or (primHiFiDevice[0] in file[4] and primHiFiDeviceState["input"] in file[4][primHiFiDevice[0]])):
+                        value+=5
+                    elif primHifiID=="" or "input" not in primHiFiDeviceState or (primHiFiDevice[0] in file[4] and primHiFiDeviceState["input"] in file[4][primHiFiDevice[0]]):
+                        value+=1
+                elif item[1] in self.hifiDevices and self.mediaCfg[self.mediaCfgIDArray[action]][3]:
+                    connectedHifis=[]
+                    for hifiDevice in self.hifiDevices:
+                        if hifiDevice in file[4] and file[4][hifiDevice][0]!="":
+                            connectedHifis.append(hifiDevice)
+                    if len(connectedHifis)==1:
+                        primHifiID=connectedHifis[0]
+                    elif len(connectedHifis)>1 and view in self.viewsIDArray and self.views[self.viewsIDArray[view]][1] in connectedHifis:
+                        primHifiID=self.views[self.viewsIDArray[view]][1]
+                    elif view in self.viewsIDArray:
+                        primHifiID=self.views[self.viewsIDArray[view]][1]
+                    if view != "" and item[1] == self.views[self.viewsIDArray[view]][1]:
+                        value+=10
+                    if view != "" and view in file[10]:
+                        value+=100
+                    if filePrimButtonState=="[on]" or filePrimButtonState=="#[on]":
+                        value+=2
+                #else:
+                #    print item[1]
+                if action=="input" and targetState=="[value]" and value>0:
+                    if targetValue in self.filesIDArray:
+                        if primHifiID in self.files[self.filesIDArray[targetValue]][4] and self.files[self.filesIDArray[targetValue]][4][primHifiID][0]!="":
+                            targetValue2=self.files[self.filesIDArray[targetValue]][4][primHifiID][0]
+                            value+=200
                     else:
-                        targetState="[on]"
-                eg.TriggerEvent(prefix="O-MEGA", suffix="CMD.buttons", payload={"target":thisFilesPrimButtonID,"targetState":targetState,"view":view})
-                #tempEvent=self.LogWrapper.emptyEvent(prefix="O-MEGA", suffix="CMD.buttons", payload={"target":thisFilesPrimButtonID,"targetState":targetState}))
-                #self.LogWrapper.LogEvent(tempEvent)
-            else:
-                if item[0]=="devices":
-                    #eg.TriggerEvent(prefix="O-MEGA", suffix="EXT."+self.devices[self.devicesIDArray[item[1]]][3]+"."+item[0]+"."+self.devices[self.devicesIDArray[item[1]]][1]+"."+action, payload={"target":item[1],"targetState":targetState})
-                    tempEvent=self.LogWrapper.emptyEvent(prefix="O-MEGA", suffix="EXT."+self.devices[self.devicesIDArray[item[1]]][3]+"."+item[0]+"."+self.devices[self.devicesIDArray[item[1]]][1]+"."+action, payload={"target":item[1],"targetState":targetState,"view":view})
-                    wx.CallAfter(self.LogWrapper.LogEvent,tempEvent,True)
-                elif item[0]=="programs":
-                    #eg.TriggerEvent(prefix="O-MEGA", suffix="EXT."+self.programs[self.programsIDArray[item[1]]][3]+"."+item[0]+"."+self.programs[self.programsIDArray[item[1]]][1]+"."+action, payload={"target":item[1],"targetState":targetState})
-                    tempEvent=self.LogWrapper.emptyEvent(prefix="O-MEGA", suffix="EXT."+self.programs[self.programsIDArray[item[1]]][3]+"."+item[0]+"."+self.programs[self.programsIDArray[item[1]]][1]+"."+action, payload={"target":item[1],"targetState":targetState,"view":view})
-                    wx.CallAfter(self.LogWrapper.LogEvent,tempEvent,True)
+                        value+=150
+                if value>0:
+                    items.append([item,value,primHifiID,targetValue2,file[0]])
+        items=sorted(items, key=lambda x: x[1])
+        items=items[::-1]
+        #print items
+        if len(items)==0 or action=="input" and targetState=="[value]" and items[0][1]<150:
+            eg.PrintError("O-MEGA: No media devices found, will do nothing!")
+            return False
+        targetValue=items[0][3]
+        primHifiID=items[0][2]
+        item=items[0][0]
+        kind=item[0]
+        if kind=="devices":
+            thing=self.devices[self.devicesIDArray[item[1]]]
+        elif kind=="programs":
+            thing=self.programs[self.programsIDArray[item[1]]]
+            if primHifiID=="":
+                primHifiID=thing[3]
+            #if thing[2]["forwardToMasterAudio"]=="1" and primHifiID!="":
+            #    pass
+            #else:
+            #    primHifiID=thing[3]
+        else:
+            eg.PrintError("O-MEGA: Media command invalid!")
+            return False
+        if self.mediaCfg[self.mediaCfgIDArray[action]][3] and thing[2]["forwardToMasterAudio"]=="1" and primHifiID!="":
+            thing=self.devices[self.devicesIDArray[primHifiID]]
+            kind="devices"
+        #print "Media is: "+kind+u"/"+thing[0]
+        if action=="power":
+            thisFilesPrimButtonID=kind+u"/"+thing[0]+u"/power"
+            if targetState != "[on]" and targetState != "[off]":
+                thisFilesPrimButtonState=self.buttonStates[thisFilesPrimButtonID]["state"]
+                if thisFilesPrimButtonState=="[on]" or thisFilesPrimButtonState=="#[on]":
+                    targetState="[off]"
+                else:
+                    targetState="[on]"
+            eg.TriggerEvent(prefix="O-MEGA", suffix="CMD.buttons", payload={"target":thisFilesPrimButtonID,"targetState":targetState,"view":view,"targetValue":[targetValue,None,None,None]})
+            #tempEvent=self.LogWrapper.emptyEvent(prefix="O-MEGA", suffix="CMD.buttons", payload={"target":thisFilesPrimButtonID,"targetState":targetState,"view":view,"targetValue":[targetValue,None,None,None]}))
+            #self.LogWrapper.LogEvent(tempEvent)
+        else:
+            #eg.TriggerEvent(prefix="O-MEGA", suffix="EXT."+thing[3]+"."+kind+"."+thing[1]+"."+action, payload={"target":thing[0],"targetState":targetState,"view":view,"targetValue":[targetValue,None,None,None]})
+            tempEvent=self.LogWrapper.emptyEvent(prefix="O-MEGA", suffix="EXT."+thing[3]+"."+kind+"."+thing[1]+"."+action, payload={"target":thing[0],"targetState":targetState,"view":view,"targetValue":[targetValue,None,None,None]})
+            wx.CallAfter(self.LogWrapper.LogEvent,tempEvent,True)
                 
                 
     def getFilesForDropdown(self,dropdownid):
@@ -2673,6 +2843,532 @@ class OMEGA(eg.PluginBase):
             del self.registeredWebFunctions[alias]
             return True
         return False
+    
+
+    def ReplaceCharForCompare(self,text):
+        text=self.uml.unescape(unicode(text).lower().replace("&nbsp;"," "))
+        return text.replace(u"ä","a").replace(u"ü","u").replace(u"ö","o").replace(u"ß","s").replace("<br/>"," ").replace("<br>"," ").replace("  "," ").strip()
+    
+        
+    def InterpretSpokenCommand(self, text, targetUser, defaultView=""):
+        command = " "+self.ReplaceCharForCompare(text)+" "
+        commandParts=[0]
+        newIndex=0
+        while newIndex!=-1:
+            newIndex=command.find(", ",newIndex)
+            if newIndex!=-1:
+                commandParts.append(newIndex)
+                newIndex+=1
+        command = command.replace(","," ").replace("."," ")
+        languageId=0
+        matchingViews=[["-",-1,"","v",0,0]]
+        if targetUser in self.userSettings:
+            languageId=self.userSettings[targetUser]["language"]
+            if defaultView=="":
+                try:
+                    view=self.userSettings[targetUser]["selectedView"]
+                    viewIndex=self.viewsIDArray[view]
+                    matchingViews=[[view,-1,"","v",self.views[viewIndex][2],viewIndex]]
+                except:
+                    pass
+            elif defaultView in self.viewsIDArray:
+                viewIndex=self.viewsIDArray[defaultView]
+                matchingViews=[[defaultView,-1,"","v",self.views[viewIndex][2],viewIndex]]
+        matchingStates=[]
+        viewIndicators=[]
+        for state in self.dictionary["statesCfg.jsonvoice"]:
+            stateNames=self.dictionary["statesCfg.jsonvoice"][state][languageId].split(",")
+            for stateName in stateNames:
+                stateName=self.ReplaceCharForCompare(stateName)
+                if stateName != "":
+                    newIndex=0
+                    while newIndex!=-1:
+                        newIndex=command.find(" "+stateName+" ",newIndex)
+                        if newIndex!=-1:
+                            newIndex+=1
+                            if state=="[set]":
+                                valueStart=newIndex+len(stateName)+1
+                                valueEnd=command.find(" ",valueStart)
+                                value=command[valueStart:valueEnd]
+                                value=value.replace(u"%",u"").replace(u"°C",u"").replace(u"°F",u"").replace(u"°",u"").replace(u",",u".")
+                                if value!="":
+                                    for state2 in ["and"]:
+                                        state2Names=self.dictionary["statesCfg.jsonvoice"][state2][languageId].split(",")
+                                        for state2Name in state2Names:
+                                            state2Name=self.ReplaceCharForCompare(state2Name)
+                                            if value == state2Name:
+                                                state=state2
+                                                break
+                                        if state!="[set]":
+                                            break
+                                    if state=="[set]":
+                                        matchingStates.append([state,newIndex,stateName,"s",value])
+                            elif state=="and":
+                                commandParts.append(newIndex)
+                            elif state=="inthe":
+                                viewIndicators.append([state,newIndex,stateName,"s"])
+                            else:
+                                matchingStates.append([state,newIndex,stateName,"s"])
+        if len(matchingStates)>0:
+            matchingStates=sorted(matchingStates, key=lambda x: x[1])
+            if matchingStates[-1][0]=="again" or matchingStates[-1][0]=="times":
+                timesFound=False
+                times=1
+                somethingElseFound=False
+                for tempState in matchingStates:
+                    if tempState[0]=="times":
+                        timesFound=True
+                    elif tempState[0][0]=="N":
+                        times=int(tempState[0][1:])
+                    elif tempState[0]=="again":
+                        pass
+                    else:
+                        somethingElseFound=True
+                        break
+                if not somethingElseFound:
+                    if not timesFound:
+                        times=1
+                    processThread = Thread(
+                        target=self.processInterpretCommandThread,
+                        args=(self.spokenCommandCache[targetUser]["lastCommand"], targetUser, times, )
+                    )
+                    processThread.start()
+                    return True
+        matchingMediaActions=[]
+        for actionId in self.dictionary["mediaCfg.jsonvoice"]:
+            actionNames=self.dictionary["mediaCfg.jsonvoice"][actionId][languageId].split(",")
+            for actionName in actionNames:
+                actionName=self.ReplaceCharForCompare(actionName)
+                if actionName != "":
+                    newIndex=0
+                    while newIndex!=-1:
+                        newIndex=command.find(" "+actionName+" ",newIndex)
+                        if newIndex!=-1:
+                            newIndex+=1
+                            if actionId=="voiceCommand":
+                                valueStart=text.find(" ",newIndex+5)+1
+                                value=text[valueStart:]
+                                matchingMediaActions.append([actionId,newIndex,actionName,"m",value])
+                                break
+                            elif actionId=="scene":
+                                valueStart=newIndex+len(actionName)+1
+                                for scene in self.sceneNames:
+                                    sceneNames=scene[1].split(",")
+                                    for sceneName in sceneNames:
+                                        sceneName=self.ReplaceCharForCompare(sceneName)
+                                        if len(command)>=(valueStart+len(sceneName)):
+                                            matchString=command[valueStart:(valueStart+len(sceneName))]
+                                            if matchString==sceneName:
+                                                matchingMediaActions.append([actionId,newIndex,actionName+" "+sceneName,"m",scene[0]])
+                                                break
+                            else:
+                                matchingMediaActions.append([actionId,newIndex,actionName,"m",None])
+        for view in self.dictionary["views.json"]:
+            viewNames=self.dictionary["views.json"][view][languageId].split(",")
+            for viewName in viewNames:
+                viewName=self.ReplaceCharForCompare(viewName)
+                if viewName != "":
+                    newIndex=0
+                    while newIndex!=-1:
+                        newIndex=command.find(" "+viewName,newIndex)
+                        if newIndex!=-1:
+                            newIndex+=1
+                            if matchingViews[0][1]==-1:
+                                matchingViews.pop(0)
+                            viewIndex=self.viewsIDArray[view]
+                            matchingViews.append([view,newIndex,viewName,"v",self.views[viewIndex][2],viewIndex])
+                            for viewIndicator in viewIndicators:
+                                if (newIndex-1-len(viewIndicator[2]))==viewIndicator[1]:
+                                    command=command[:newIndex]+" "*len(viewName)+command[newIndex+len(viewName):]
+                                    break
+        matchingFiles=[]
+        matchingButtons=[]
+        for file in self.files:
+            fileId=file[0]
+            if fileId in self.dictionary["files.json"]:
+                fileNames=self.dictionary["files.json"][fileId][languageId].split(",")
+                for fileName in fileNames:
+                    fileName=self.ReplaceCharForCompare(fileName)
+                    if fileName != "":
+                        indexStart=1
+                        while True:
+                            indexEnd=command.find(" ",indexStart)
+                            if indexEnd!=-1:
+                                indexLen=indexEnd-indexStart
+                                if (indexLen>2 and indexLen*2>=len(fileName) and command[indexStart:indexEnd] == fileName[:indexLen]) or command[indexStart:indexEnd] == fileName:
+                                    matchingFiles.append([fileId,indexStart,fileName,"f"])
+                                if indexEnd+1>=len(command):
+                                    break
+                                else:
+                                    indexStart=indexEnd+1
+                            else:
+                                break
+            fileButtons="files.json"+fileId
+            if fileButtons in self.dictionary:
+                for button in self.dictionary[fileButtons]:
+                    buttonNames=self.dictionary[fileButtons][button][languageId].split(",")
+                    for buttonName1 in buttonNames:
+                        buttonName1=self.ReplaceCharForCompare(buttonName1)
+                        buttonNames2=buttonName1.split(" ")
+                        if buttonName1 != "":
+                            newIndex=0
+                            while newIndex!=-1:
+                                newIndex=command.find(" "+buttonName1+" ",newIndex)
+                                if newIndex!=-1:
+                                    newIndex+=1
+                                    matchingButtons.append([fileId+"/"+button,newIndex,buttonName1,"b",1,len(buttonNames2)+3,fileId,fileName])
+                        if len(buttonNames2)>1:
+                            newIndex=0
+                            while newIndex!=-1:
+                                newIndex=command.find(" "+buttonNames2[0]+" ",newIndex)
+                                if newIndex!=-1:
+                                    newIndex+=1
+                                    count=0#Key(4) is -1 because of the first match and +1 because the page it is on has not been validated yet to be found
+                                    for buttonName in buttonNames2[1:]:
+                                        if buttonName != "":
+                                            newIndex2=command.find(" "+buttonName+" ",0)
+                                            if newIndex2!=-1:
+                                                count+=1
+                                    matchingButtons.append([fileId+"/"+button,newIndex,buttonName1,"b",(len(buttonNames2)-count),len(buttonNames2),fileId,fileName]) 
+        if targetUser not in self.usersIDArray:
+            eg.PrintError("O-MEGA: User %s not found!" % unicode(targetUser))
+            return False
+        for i in reversed(xrange(len(matchingViews))):
+            if matchingViews[i][0] in self.users[self.usersIDArray[targetUser]][2]:
+                self.userSettings[targetUser]["selectedView"]=matchingViews[i][0]
+            else:
+                matchingViews.pop(i)
+        if len(matchingViews)==0:
+            view=self.users[self.usersIDArray[targetUser]][2][0]
+            viewIndex=self.viewsIDArray[view]
+            matchingViews.append([view,-1,"","v",self.views[viewIndex][2],viewIndex])
+        matchingViews=sorted(matchingViews, key=lambda x: x[1])
+        print u"O-MEGA: Found matching views: %s" % unicode(matchingViews)
+        print u"O-MEGA: Found matching states: %s" % unicode(matchingStates)
+        matchingMediaActions=sorted(matchingMediaActions, key=lambda x: x[1])
+        print u"O-MEGA: Found matching media actions: %s" % unicode(matchingMediaActions)
+        matchingFiles=sorted(matchingFiles, key=lambda x: x[1])
+        print u"O-MEGA: Found matching pages: %s" % unicode(matchingFiles)
+        matchingButtons=sorted(matchingButtons, key=lambda x: x[1])
+        print u"O-MEGA: Found matching buttons: %s" % unicode(matchingButtons)
+        commandParts.append(len(command))
+        commandParts=sorted(commandParts)
+        
+        oneButtonMode=False
+        matchingButtons2=self.InterpretSpokenCommandButtonFilter(matchingViews,matchingStates,matchingMediaActions,matchingFiles,matchingButtons,commandParts,languageId,command)
+        if len(matchingButtons2)==0:
+            print u"O-MEGA: Didn't find anything in the current view(s), trying all views of the user now.."
+            oneButtonMode=True
+            allUsersViews=[]
+            for view in self.users[self.usersIDArray[targetUser]][2]:
+                viewIndex=self.viewsIDArray[view]
+                allUsersViews.append([view,1,"","v",self.views[viewIndex][2],viewIndex])
+            matchingButtons2=self.InterpretSpokenCommandButtonFilter(allUsersViews,matchingStates,matchingMediaActions,matchingFiles,matchingButtons,commandParts,languageId,command)
+        if len(matchingButtons2)==0:
+            print u"O-MEGA: Didn't find anything again, will do nothing."
+            return False
+        print u"O-MEGA: Found combined: %s" % unicode(matchingButtons2)
+        if oneButtonMode:
+            for part in matchingButtons2:
+                if len(part)>1 and part[0][4] == part[1][4] and part[0][5] == part[1][5]:
+                    print u"O-MEGA: Now we found too much, will do nothing."
+                    return False
+        self.spokenCommandCache[targetUser]["lastCommand"]=matchingButtons2
+        self.userSettings[targetUser]["selectedView"]=matchingButtons2[0][0][8][0]
+        processThread = Thread(
+            target=self.processInterpretCommandThread,
+            args=(matchingButtons2, targetUser, )
+        )
+        processThread.start()
+        return True
+        
+        
+    def processInterpretCommandThread(self,matchingButtons2,targetUser, times=1):
+        executedThings=[]
+        for t in xrange(times):
+            for part in matchingButtons2:
+                for i in xrange(len(part)):
+                    if i==0 or part[i][4]==part[i-1][4] and part[i][5]==part[i-1][5]:
+                        thing=part[i]
+                        executedThings.append(thing)
+                        if thing[3]=="m":
+                            if thing[0]=="scene":
+                                self.LogWrapper.sceneOnOff(thing[7],thing[9][0])
+                            elif thing[0]=="voiceCommand":
+                                self.ActiveMedia(thing[6],thing[9][0],thing[8][0],thing[7])
+                            elif thing[0]=="wait":
+                                time.sleep(thing[9][4])
+                            else:
+                                self.ActiveMedia(thing[6],thing[9][0],thing[8][0],thing[9][4])
+                        else:
+                            eg.TriggerEvent(prefix="O-MEGA", suffix="CMD.buttons", payload={"target":thing[0], "targetState":thing[9][0],"view":thing[8][0],"targetValue":[thing[9][4],None,None,None],"user":targetUser})
+                    else:
+                        break
+        #print executedThings
+        return executedThings
+        
+    
+    def InterpretSpokenCommandButtonFilter(self,matchingViews,matchingStates,matchingMediaActions,matchingFiles,matchingButtons,commandParts,languageId,command):
+        result=[]
+        matchingButtonsPerPart=[]
+        for j in xrange(len(commandParts)-1):
+            useAll=False
+            value=None
+            times=1
+            tempLastNumber=0
+            secs=0
+            matchingStates2=[]
+            for state in matchingStates:
+                inThisPart=False
+                if state[1]>=commandParts[j] and state[1]<commandParts[j+1]:
+                    inThisPart=True
+                if state[0]=="[all]":
+                    if inThisPart:
+                        useAll=True
+                elif state[0]=="[set]":
+                    if inThisPart:
+                        value=state[4]
+                        matchingStates2.append(["[value]",state[1],state[2],state[3]])
+                elif state[0]=="times":
+                    if inThisPart:
+                        times=tempLastNumber
+                elif state[0]=="seconds":
+                    if inThisPart:
+                        secs+=tempLastNumber
+                elif state[0]=="minutes":
+                    if inThisPart:
+                        secs+=(tempLastNumber*60)
+                elif state[0]=="hours":
+                    if inThisPart:
+                        secs+=(tempLastNumber*3600)
+                elif state[0][0]=="#":
+                    if inThisPart:
+                        value=state[0]
+                        matchingStates2.append(["[value]",state[1],state[2],state[3]])
+                elif state[0][0]=="N":
+                    if inThisPart:
+                        tempLastNumber=int(state[0][1:])
+                else:
+                    matchingStates2.append(state)
+            if len(matchingMediaActions)!=0 or len(matchingStates2)!=0:# and (len(matchingFiles)!=0 or len(matchingButtons)!=0):
+                if j==0:
+                    tempStates=[]
+                    for state in matchingStates2:
+                        tempStates.append(state + [value])
+                    tempButtonKey=len(command)
+                    tempFiles=[]
+                    if len(matchingFiles)!=0:
+                        tempButtonKey=matchingFiles[0][1]
+                        tempFiles=[matchingFiles[0][0]]
+                    if len(matchingButtons)!=0 and matchingButtons[0][1]<tempButtonKey:
+                        tempButtonKey=matchingButtons[0][1]
+                    matchingButtonsPerPart.append({"view":[matchingViews[0]],"state":tempStates,"buttonsKey":[tempButtonKey],"useAll":useAll,"repeat":times,"files":tempFiles})
+                else:
+                    matchingButtonsPerPart.append({"view":matchingButtonsPerPart[j-1]["view"],"state":matchingButtonsPerPart[j-1]["state"],"buttonsKey":matchingButtonsPerPart[j-1]["buttonsKey"],"useAll":matchingButtonsPerPart[j-1]["useAll"],"repeat":matchingButtonsPerPart[j-1]["repeat"],"files":matchingButtonsPerPart[j-1]["files"]})
+                foundView=False
+                for view in matchingViews:
+                    if view[1]<commandParts[j+1]:
+                        if view[1]>=commandParts[j]:
+                            if foundView==False:
+                                foundView=True
+                                matchingButtonsPerPart[j]["view"]=[]
+                            matchingButtonsPerPart[j]["view"].append(view)
+                    else:
+                        break
+                foundState=False
+                for state in matchingStates2:
+                    if state[1]<commandParts[j+1]:
+                        if state[1]>=commandParts[j]:
+                            if foundState==False:
+                                foundState=True
+                                matchingButtonsPerPart[j]["state"]=[]
+                            matchingButtonsPerPart[j]["state"].append(state+[value])
+                    else:
+                        break
+                if not foundState and value!=None:
+                    for stateI in xrange(len(matchingButtonsPerPart[j]["state"])):
+                        matchingButtonsPerPart[j]["state"][stateI][4]=value
+                keysFoundInThisPart=[]
+                for button in matchingButtons:
+                    if button[1]>=commandParts[j]:
+                        if button[1]<commandParts[j+1]:
+                            if button[1] not in keysFoundInThisPart:
+                                keysFoundInThisPart.append(button[1])
+                        else:
+                            break
+                actionsFoundInThisPart=[]
+                for action in matchingMediaActions:
+                    if action[1]>=commandParts[j]:
+                        if action[1]<commandParts[j+1]:
+                            if action[0] not in actionsFoundInThisPart:
+                                actionsFoundInThisPart.append(action[0])
+                        else:
+                            break
+                filesFoundInThisPart=[]
+                for file in matchingFiles:
+                    if file[1]>=commandParts[j]:
+                        if file[1]<commandParts[j+1]:
+                            if file[1] not in keysFoundInThisPart:
+                                keysFoundInThisPart.append(file[1])
+                            if file[0] not in filesFoundInThisPart:
+                                filesFoundInThisPart.append(file[0])
+                        else:
+                            break
+                #print keysFoundInThisPart
+                if len(keysFoundInThisPart)==0 and len(actionsFoundInThisPart)==0 and not foundState and not foundView and value==None:
+                    continue
+                elif len(keysFoundInThisPart)!=0:
+                    matchingButtonsPerPart[j]["buttonsKey"]=[]
+                    for key in keysFoundInThisPart:
+                        matchingButtonsPerPart[j]["buttonsKey"].append(key)
+                    if len(filesFoundInThisPart)!=0:
+                        matchingButtonsPerPart[j]["files"]=[]
+                        for fileId in filesFoundInThisPart:
+                            matchingButtonsPerPart[j]["files"].append(fileId)
+                    matchingButtonsPerPart[j]["useAll"]=useAll
+                matchingButtonsPerPart[j]["repeat"]=times
+                #print matchingButtonsPerPart[j]
+                tempResult=self.ProcessInterpretSpokenCommandButtonFilter(matchingMediaActions,matchingFiles,matchingButtons,commandParts,languageId,command,actionsFoundInThisPart,value,j,secs,matchingButtonsPerPart[j])
+                if len(tempResult)==0 and j>0 and (len(actionsFoundInThisPart)!=0 or foundState or foundView or value!=None):
+                    tempResult=self.ProcessInterpretSpokenCommandButtonFilter(matchingMediaActions,matchingFiles,matchingButtons,commandParts,languageId,command,actionsFoundInThisPart,value,j,secs,{"view":matchingButtonsPerPart[j]["view"],"state":matchingButtonsPerPart[j]["state"],"buttonsKey":matchingButtonsPerPart[j-1]["buttonsKey"],"useAll":matchingButtonsPerPart[j-1]["useAll"],"repeat":matchingButtonsPerPart[j]["repeat"],"files":matchingButtonsPerPart[j]["files"]})
+                for n in reversed(xrange(len(tempResult))):
+                    if tempResult[n][0]=="wait":
+                        result.append([tempResult[n]])
+                        tempResult.pop(n)
+                if len(tempResult)>0:
+                    tempResult=reversed(sorted(tempResult, key=lambda x: x[5]))
+                    tempResult=sorted(tempResult, key=lambda x: x[4])
+                    result.append(tempResult)
+        return result
+
+    
+    def ProcessInterpretSpokenCommandButtonFilter(self,matchingMediaActions,matchingFiles,matchingButtons,commandParts,languageId,command,actionsFoundInThisPart,value,j,secs,matchingButtonsForThisPart):
+        tempResult=[]
+        foundSomething=False
+        if matchingButtonsForThisPart["useAll"]==False:
+            for matchingButton in matchingButtons:
+                if matchingButton[1] in matchingButtonsForThisPart["buttonsKey"]:
+                    if matchingButton[0] in self.buttonsIDArray:
+                        if not self.buttonViewsForPage[matchingButton[6]]:
+                            #tempMatchingViews=matchingButtonsForThisPart["view"]
+                            tempMatchingViews=self.viewsInList(matchingButtonsForThisPart["view"],self.files[self.filesIDArray[matchingButton[6]]][10])
+                        else:
+                            tempMatchingViews=self.viewsInList(matchingButtonsForThisPart["view"],self.buttons[self.buttonsIDArray[matchingButton[0]]][9])
+                        if len(tempMatchingViews)>0:
+                            foundStateForThisButton=None
+                            tempButton=self.buttons[self.buttonsIDArray[matchingButton[0]]]
+                            for state in matchingButtonsForThisPart["state"]:
+                                if state[0]=="[toggle]" or state[0] in tempButton[4]:
+                                    foundStateForThisButton=state
+                                    break
+                            if (foundStateForThisButton==None or foundStateForThisButton[0]=="[value]") and tempButton[7]!={}:
+                                for tempState in tempButton[4]:
+                                    if tempState in tempButton[7] and "rename" in tempButton[7][tempState]:
+                                        tempRenames=tempButton[7][tempState]["rename"].split(",")
+                                        if self.ReplaceCharForCompare(tempRenames[0])=="":
+                                            continue
+                                        else:
+                                            for tempRename in tempRenames:
+                                                tempRename=" "+self.ReplaceCharForCompare(tempRename)+" "
+                                                if tempRename in command[commandParts[j]:commandParts[j+1]]:
+                                                    tempState2=state
+                                                    tempState2[0]=tempState
+                                                    foundStateForThisButton=tempState2
+                                                    break
+                                            if foundStateForThisButton!=None and foundStateForThisButton[0]!="[value]":
+                                                break
+                            if foundStateForThisButton!=None:
+                                tempButtonValue=matchingButton[4]
+                                if matchingButton[6] in matchingButtonsForThisPart["files"]:
+                                    tempButtonValue-=1
+                                for z in xrange(matchingButtonsForThisPart["repeat"]):
+                                    tempResult.append([matchingButton[0],matchingButton[1],matchingButton[2],matchingButton[3],tempButtonValue,matchingButton[5],matchingButton[6],matchingButton[7],tempMatchingViews[0],foundStateForThisButton])
+                                if tempButtonValue==0:
+                                    foundSomething=True
+        if foundSomething==False:
+            for matchingFile in matchingFiles:
+                if matchingFile[0] in matchingButtonsForThisPart["files"]:
+                    if matchingFile[0] in self.filesIDArray:
+                        tempMatchingViews=self.viewsInList(matchingButtonsForThisPart["view"],self.files[self.filesIDArray[matchingFile[0]]][10])
+                        if len(tempMatchingViews)>0 and len(self.files[self.filesIDArray[matchingFile[0]]][5])!=0:
+                            tempButtons=self.files[self.filesIDArray[matchingFile[0]]][5]
+                            for tempButton in tempButtons:
+                                if tempButton[8]:
+                                    if self.buttonViewsForPage[matchingFile[0]]:
+                                        tempMatchingViews=self.viewsInList(tempMatchingViews,tempButton[9])
+                                    if not self.buttonViewsForPage[matchingFile[0]] or len(tempMatchingViews)>0:
+                                        for state in matchingButtonsForThisPart["state"]:
+                                            if state[0]=="[toggle]" or state[0] in tempButton[4]:
+                                                tempButtonName=matchingFile[0]
+                                                fileButtons="files.json"+matchingFile[0]
+                                                if fileButtons in self.dictionary and tempButton[0] in self.dictionary[fileButtons]:
+                                                    tempButtonName=self.ReplaceCharForCompare(self.dictionary[fileButtons][tempButton[0]][languageId])
+                                                for z in xrange(matchingButtonsForThisPart["repeat"]):
+                                                    tempResult.append([matchingFile[0]+"/"+tempButton[0],matchingFile[1],tempButtonName,"f",1,0,matchingFile[0],matchingFile[2],tempMatchingViews[0],state])
+                                                foundSomething=True
+                                                break
+        if len(actionsFoundInThisPart)!=0:
+            for mediaAction in self.mediaCfg:
+                if mediaAction[0] in actionsFoundInThisPart:
+                    for matchingMediaAction in matchingMediaActions:
+                        if mediaAction[0] == matchingMediaAction[0]:
+                            if matchingMediaAction[0]=="scene" and foundSomething==False:
+                                tempScene=self.sceneNames[self.sceneNamesIds[matchingMediaAction[4]]]
+                                if tempScene[3]==0:
+                                    tempMatchingViews=self.viewsInList(matchingButtonsForThisPart["view"],tempScene[8])
+                                    if len(tempMatchingViews)>0:
+                                        tempView=tempMatchingViews[0]
+                                        foundStateForThisAction=False
+                                        for state in matchingButtonsForThisPart["state"]:
+                                            if state[0] in mediaAction[2] and (tempScene[7]==0 or state[0] in ["[activate]","[stop]"]):
+                                                foundStateForThisAction=True
+                                                for z in xrange(matchingButtonsForThisPart["repeat"]):
+                                                    tempResult.append([matchingMediaAction[0],matchingMediaAction[1],matchingMediaAction[2],"m",1,1,mediaAction[1],matchingMediaAction[4],tempView,state])
+                                                break
+                                        if foundStateForThisAction==False:
+                                            for z in xrange(matchingButtonsForThisPart["repeat"]):
+                                                tempResult.append([matchingMediaAction[0],matchingMediaAction[1],matchingMediaAction[2],"m",1,0,mediaAction[1],matchingMediaAction[4],tempView,[mediaAction[2][0],None,None,"s",value]])
+                                        foundSomething=True
+                            elif matchingMediaAction[0]=="selectInput" and foundSomething==False:
+                                for fileId in matchingButtonsForThisPart["files"]:
+                                    tempFile=self.files[self.filesIDArray[fileId]]
+                                    tempMatchingViews=self.viewsInList(matchingButtonsForThisPart["view"],tempFile[10])
+                                    if len(tempMatchingViews)>0:
+                                        for tempView in tempMatchingViews:
+                                            tempResult.append([matchingMediaAction[0],matchingMediaAction[1],matchingMediaAction[2],"m",1,1,mediaAction[1],matchingMediaAction[4],tempView,[mediaAction[2][0],None,None,"s",fileId]])
+                                            foundSomething=True
+                            elif matchingMediaAction[0]=="wait":
+                                if secs>0:
+                                    tempView=matchingButtonsForThisPart["view"][0]
+                                    tempResult.append([matchingMediaAction[0],matchingMediaAction[1],matchingMediaAction[2],"m",1,1,mediaAction[1],matchingMediaAction[4],tempView,[mediaAction[2][0],None,None,"s",secs]])
+                            elif matchingMediaAction[0] in self.mediaCfgIDArray and foundSomething==False:
+                                tempView=matchingButtonsForThisPart["view"][0]
+                                foundStateForThisAction=False
+                                for state in matchingButtonsForThisPart["state"]:
+                                    if state[0] in mediaAction[2]:
+                                        for z in xrange(matchingButtonsForThisPart["repeat"]):
+                                            tempResult.append([matchingMediaAction[0],matchingMediaAction[1],matchingMediaAction[2],"m",1,1,mediaAction[1],matchingMediaAction[4],tempView,state])
+                                        foundStateForThisAction=True
+                                        break
+                                if foundStateForThisAction==False:
+                                    for z in xrange(matchingButtonsForThisPart["repeat"]):
+                                        tempResult.append([matchingMediaAction[0],matchingMediaAction[1],matchingMediaAction[2],"m",1,0,mediaAction[1],matchingMediaAction[4],tempView,[mediaAction[2][0],None,None,"s",value]])
+                                foundSomething=True
+                            break
+                    if foundSomething:
+                        break
+        return tempResult
+    
+    
+    def viewsInList(self, views, list):
+        tempViews=[]
+        for item in views:
+            if item[0] in list:
+                tempViews.append(item)
+        tempViews=reversed(sorted(tempViews, key=lambda x: x[5]))
+        tempViews=sorted(tempViews, key=lambda x: x[4])
+        return tempViews
+
         
 #===============================================================================
 # O-MEGA functions End
@@ -2852,7 +3548,7 @@ class Ping(eg.ActionBase):
             
 class ReadyForAudio(eg.ActionBase):
     name = "Ready to play audio?"
-    description = """Turns on all devices and programs that are needed to hear something. Returns True if everything is ready, returns False if not and re-triggers the event. !!Only works with O-CMD events!!"""
+    description = """Turns on all devices and programs that are needed to hear something. Returns True if everything is ready, returns False if not and re-triggers the event after 6 sec. !!Only works with O-CMD events!!"""
     
     def __call__(self):
         tempEvent=eg.event
@@ -2867,17 +3563,22 @@ class ActiveMedia(eg.ActionBase):
     name = "Control Active Media"
     description = "Send a command to the active media player."
     
-    def __call__(self,action,targetState,view="-"):
+    class text:
+        action = "Target Action:"
+        view = "View ID for context (Optional):"
+        targetState = "Target State:"
+        value = "Target Value (Optional):"
+    
+    def __call__(self,action,targetState,view="",value=""):
+        view=eg.ParseString(view)
+        value=eg.ParseString(value)
         if self.plugin.pluginServer:
-            return self.plugin.ActiveMedia(action,targetState,view)
+            return self.plugin.ActiveMedia(action,targetState,view,value)
         else:
-            if self.plugin.serverOnline:
-                return self.plugin.RequestData(self.plugin.serverIP, self.plugin.info.args[0], self.plugin.info.args[1], 'self.plugin.ActiveMedia(\''+action+'\',\''+targetState+'\',\''+view+'\')')
-            else:
-                eg.PrintError("O-MEGA: Server ("+self.plugin.serverIP+":"+str(self.plugin.info.args[0])+") is not online!")
-                return False
+            return self.plugin.ServerExecute('self.ActiveMedia(\''+action+'\',\''+targetState+'\',\''+view+'\',\''+value+'\')')
             
-    def Configure(self,action="play",targetState="[on]",view="-"):
+    def Configure(self,action="play",targetState="[activate]",view="",value=""):
+        text = self.text
         
         def onChoice(evt):
             tempAction=actionsCtrl.GetStringSelection()
@@ -2888,40 +3589,89 @@ class ActiveMedia(eg.ActionBase):
             else:
                 statesCtrl.SetSelection(0)
         
-        statesList={"power":["[on]","[off]","[toggle]"],"play":["[on]","[off]","[toggle]"],"pause":["[on]","[off]","[toggle]"],"stop":["[on]","[off]","[toggle]"],"rec":["[on]","[off]","[toggle]"],"prev":["[on]","[off]","[toggle]"],"next":["[on]","[off]","[toggle]"],"rew":["[on]","[off]","[toggle]"],"fwd":["[on]","[off]","[toggle]"],"channel":["[up]","[down]"],"volume":["[up]","[down]"],"mute":["[on]","[off]","[toggle]"],"up":["[on]","[off]","[toggle]"],"down":["[on]","[off]","[toggle]"],"left":["[on]","[off]","[toggle]"],"right":["[on]","[off]","[toggle]"],"ok":["[on]","[off]","[toggle]"],"back":["[on]","[off]","[toggle]"],"info":["[on]","[off]","[toggle]"],"menu":["[on]","[off]","[toggle]"],"menu2":["[on]","[off]","[toggle]"],"special":["[on]","[off]","[toggle]"],"red":["[on]","[off]","[toggle]"],"green":["[on]","[off]","[toggle]"],"yellow":["[on]","[off]","[toggle]"],"blue":["[on]","[off]","[toggle]"]}
+        statesList={}
+        for action in self.plugin.mediaCfg:
+            if not action[4]:
+                statesList[action[1]]=action[2]
         actionsList=statesList.keys()
-        viewsList=[]
-        for v in self.plugin.views:
-            viewsList.append(v[0])
+        #viewsList=[]
+        #for v in self.plugin.views:
+        #    viewsList.append(v[0])
         panel = eg.ConfigPanel(self)
-        st1 = panel.StaticText(Text.action)
+        st1 = panel.StaticText(text.action)
         actionsCtrl = wx.Choice(panel, -1, choices=actionsList)
         if action in actionsList:
             actionsCtrl.SetSelection(actionsList.index(action))
         else:
             actionsCtrl.SetSelection(0)
         actionsCtrl.Bind(wx.EVT_CHOICE, onChoice)
-        st2 = panel.StaticText(Text.targetState)
+        st2 = panel.StaticText(text.targetState)
         statesCtrl = wx.Choice(panel, -1, choices=statesList[actionsCtrl.GetStringSelection()])
         if targetState in statesList[actionsCtrl.GetStringSelection()]:
             statesCtrl.SetSelection(statesList[actionsCtrl.GetStringSelection()].index(targetState))
         else:
             statesCtrl.SetSelection(0)
-        st3 = panel.StaticText(Text.view)
-        viewsCtrl = wx.Choice(panel, -1, choices=viewsList)
-        if str(view) in viewsList:
-            viewsCtrl.SetSelection(viewsList.index(str(view)))
-        else:
-            viewsCtrl.SetSelection(0)
-        eg.EqualizeWidths((st1,st2,st3))
+        st3 = panel.StaticText(text.view)
+        #viewsCtrl = wx.Choice(panel, -1, choices=viewsList)
+        viewCtrl = panel.TextCtrl(view)
+        #if str(view) in viewsList:
+        #    viewsCtrl.SetSelection(viewsList.index(str(view)))
+        #else:
+        #    viewsCtrl.SetSelection(0)
+        st4 = panel.StaticText(text.value)
+        valueCtrl = panel.TextCtrl(value)
+        eg.EqualizeWidths((st1,st2,st3,st4))
         panel.AddLine(st1, actionsCtrl)
         panel.AddLine(st2, statesCtrl)
-        panel.AddLine(st3, viewsCtrl)
+        panel.AddLine(st3, viewCtrl)
+        panel.AddLine(st4, valueCtrl)
         while panel.Affirmed():
             panel.SetResult(
                 actionsCtrl.GetStringSelection(),
                 statesCtrl.GetStringSelection(),
-                viewsCtrl.GetStringSelection(),
+                viewCtrl.GetValue(),
+                valueCtrl.GetValue(),
+            )
+         
+
+class InterpretSpokenCommand(eg.ActionBase):
+
+    class text:
+        command = "Command:"
+        userId = "O-MEGA User ID:"
+        viewId = "Default O-MEGA View ID (Optional):"
+
+    def __call__(self, command, userId, viewId=""):
+        command=eg.ParseString(command)
+        userId=eg.ParseString(str(userId))
+        viewId=eg.ParseString(str(viewId))
+        if self.plugin.pluginServer:
+            return self.plugin.InterpretSpokenCommand(command, userId, viewId)
+        else:
+            return self.plugin.ServerExecute('self.InterpretSpokenCommand(\''+command+'\',\''+userId+'\',\''+viewId+'\')')
+
+
+    def Configure(self, command="", userId="", viewId=""):
+        text = self.text
+        panel = eg.ConfigPanel(self)
+        commandCtrl = panel.TextCtrl(command)
+        userIdCtrl = panel.TextCtrl(userId)
+        viewIdCtrl = panel.TextCtrl(viewId)
+        fl = wx.EXPAND|wx.TOP
+        box=wx.GridBagSizer(2, 3)
+        box.Add(panel.StaticText(text.command), (0, 0), flag = wx.TOP, border=12)
+        box.Add(commandCtrl, (0, 1), flag = fl, border=9)
+        box.Add(panel.StaticText(text.userId), (1, 0), flag = wx.TOP, border=12)
+        box.Add(userIdCtrl, (1, 1), flag = fl, border=9)
+        box.Add(panel.StaticText(text.viewId), (2, 0), flag = wx.TOP, border=12)
+        box.Add(viewIdCtrl, (2, 1), flag = fl, border=9)
+        box.AddGrowableCol(1)
+        panel.sizer.Add(box, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 10)
+        while panel.Affirmed():
+            panel.SetResult(
+                commandCtrl.GetValue(),
+                userIdCtrl.GetValue(),
+                viewIdCtrl.GetValue(),
             )
             
             
@@ -3946,6 +4696,12 @@ class LogWrapper():
         buttonData=self.plugin.buttons[self.plugin.buttonsIDArray[id]]
         target=buttonData[1].split("/")
         targetMode=buttonData[2]
+        if target[0]=="macro" and targetMode=="copy":#[u'24/0', u'macro', u'copy', [u'0', u'2', u'2'], [u'[on]', u'[off]'], u'{"[on]":["[on]"],"[off]":["[off]"],"buttonID":"2/lg-32lm611s-za/0"}', u'', u'', 1, [u'']]
+            id=buttonData[5]["buttonID"]
+            targetState=buttonData[5][targetState][0]
+            buttonData=self.plugin.buttons[self.plugin.buttonsIDArray[id]]
+            target=buttonData[1].split("/")
+            targetMode=buttonData[2]
         if buttonData[6]=={} and targetMode=="power" and target[0]!="interfaces":
             id=buttonData[1]+"/"+targetMode
             buttonData=self.plugin.buttons[self.plugin.buttonsIDArray[id]]
@@ -3974,7 +4730,7 @@ class LogWrapper():
                 except:
                     pass
             if tempData!={}:
-                if targetState not in tempData and "[value]" in tempData and (targetState=="[up]" or targetState=="[down]"):
+                if targetState not in tempData and "[value]" in tempData:
                     tempData[targetState]=tempData["[value]"]
                 if targetState in tempData:
                     tempData=tempData[targetState]
@@ -3986,8 +4742,10 @@ class LogWrapper():
                                 tempData2[parameter]=targetValue[(tempData[parameter][1]-1)]
                             else:
                                 tempData2[parameter]=tempData[parameter][0]
-                            if "{value}" in unicode(tempData2[parameter]) and id in self.plugin.buttonStates:
-                                tempData2[parameter]=tempData2[parameter].replace("{value}",self.plugin.buttonStates[id]["value"])
+                            if isinstance(tempData2[parameter], basestring):
+                                if "{value}" in tempData2[parameter] and id in self.plugin.buttonStates:
+                                    tempData2[parameter]=tempData2[parameter].replace("{value}",self.plugin.buttonStates[id]["value"])
+                                tempData2[parameter]=eg.ParseString(tempData2[parameter])
                 else:
                     eg.PrintError("O-MEGA: State "+targetState+" does not exist on button "+id+"!")
             event.payload={"target":target[1],"targetState":targetState,"data":tempData2,"id":id}
@@ -3997,7 +4755,7 @@ class LogWrapper():
                 event.payload["oldState"]="[?]"
         else: #for integrated macros (does only trigger a button)
             eventname="CMD."+target[0]
-            event.payload={"target":id,"targetState":targetState,"targetValue":targetValue}
+            event.payload={"target":id,"targetState":targetState,"targetValue":targetValue,"view":event.payload["view"],"user":event.payload["user"]}
         event.suffix=eventname
         if (targetState!="[value]" or len(targetValue)==0) and id in self.plugin.buttonStates and self.plugin.buttonStates[id]["state"]!=targetState and self.plugin.buttonStates[id]["state"]!="#"+targetState and (targetState in buttonData[6] and buttonData[6][targetState][0][0]!="" or buttonData[0]=="power"):
             oldState=self.plugin.buttonStates[id]["state"]
@@ -4023,6 +4781,13 @@ class LogWrapper():
         buttonData = self.plugin.buttons[self.plugin.buttonsIDArray[id]]
         target=buttonData[1].split("/")
         targetMode=buttonData[2]
+        statesDict=None
+        if target[0]=="macro" and targetMode=="copy":
+            id=buttonData[5]["buttonID"]
+            statesDict=buttonData[5]
+            buttonData=self.plugin.buttons[self.plugin.buttonsIDArray[id]]
+            target=buttonData[1].split("/")
+            targetMode=buttonData[2]
         if buttonData[6]=={} and targetMode=="power" and target[0]!="interfaces":
             id=buttonData[1]+"/"+targetMode
             buttonData=self.plugin.buttons[self.plugin.buttonsIDArray[id]]
@@ -4038,6 +4803,17 @@ class LogWrapper():
                     event.payload["targetState"]="[off]"
                 elif self.plugin.buttonStates[id]["state"]=="[off]" or self.plugin.buttonStates[id]["state"]=="#[off]":
                     event.payload["targetState"]="[on]"
+            elif "[open]" in buttonData[4] and "[close]" in buttonData[4]:
+                if self.plugin.buttonStates[id]["state"]=="[open]" or self.plugin.buttonStates[id]["state"]=="#[open]":
+                    event.payload["targetState"]="[close]"
+                elif self.plugin.buttonStates[id]["state"]=="[close]" or self.plugin.buttonStates[id]["state"]=="#[close]":
+                    event.payload["targetState"]="[open]"
+            else:
+                return event
+            if statesDict:
+                for tempState in statesDict:
+                    if statesDict[tempState][0]==event.payload["targetState"]:
+                        event.payload["targetState"]=tempState
         return event
 
     
@@ -4104,7 +4880,7 @@ class LogWrapper():
                     else:
                         return False
                 suffparts=event.suffix.split(".")
-                if suffparts[0]=="EXT":
+                if suffparts[0]=="EXT":#button events
                     tempSuffix=".".join(suffparts[2:])
                     if tempSuffix=="devices.PC_WIN.event" and len(event.payload)>2 and "suffix" in event.payload["data"]:
                         tempSuffix=tempSuffix+"."+event.payload["data"]["suffix"]
@@ -4114,7 +4890,12 @@ class LogWrapper():
                             eg.TriggerEvent(prefix="O-CMD",suffix=tempSuffix,payload=event.payload)
                         else:
                             newEvent=eg.TriggerEnduringEvent(prefix="O-CMD",suffix=tempSuffix,payload=event.payload)
-                            event.AddUpFunc(self.UpFunc,newEvent)
+                            #event.AddUpFunc(self.UpFunc,newEvent)
+                            thread = Thread(
+                                target=self.forwardShouldEnd,
+                                args=(event,newEvent, )
+                            )
+                            thread.start()
                     else:
                         if tempSuffix=="devices.PC_WIN.power" and event.payload["targetState"]=="[on]" and event.payload["oldState"]!="[on]":
                             eg.plugins.System.WakeOnLan(self.plugin.devices[self.plugin.devicesIDArray[suffparts[1]]][2]["mac"])
@@ -4140,7 +4921,12 @@ class LogWrapper():
                         eg.TriggerEvent(prefix="O-CMD",suffix=".".join(suffparts[1:]),payload=event.payload)
                     else:
                         newEvent=eg.TriggerEnduringEvent(prefix="O-CMD",suffix=".".join(suffparts[1:]),payload=event.payload)
-                        event.AddUpFunc(self.UpFunc,newEvent)
+                        #event.AddUpFunc(self.UpFunc,newEvent)
+                        thread = Thread(
+                            target=self.forwardShouldEnd,
+                            args=(event,newEvent, )
+                        )
+                        thread.start()
                 elif suffparts[0]=="Ping" and suffparts[1]=="PC" and suffparts[-1]=="ON":
                         tempPCID=".".join(suffparts[2:-1])
                         id=u"devices/"+tempPCID+u"/power"
@@ -4160,21 +4946,37 @@ class LogWrapper():
                     self.plugin.updateDataFromClientPC(event.payload)
                 else:
                     newEvent=eg.TriggerEnduringEvent(prefix="O-EVT",suffix="PC."+event.prefix+"."+event.suffix,payload=[self.plugin.thisPc,event.payload])
-                    event.AddUpFunc(self.UpFunc,newEvent)
+                    #event.AddUpFunc(self.UpFunc,newEvent)
+                    thread = Thread(
+                        target=self.forwardShouldEnd,
+                        args=(event,newEvent, )
+                    )
+                    thread.start()
             elif event.prefix=="O-CMD":
                 if event.suffix=="macro":
                     self.integratedMacro(event)
                 elif event.suffix=="sceneStart":
                     self.sceneStart(event)
                 elif event.suffix=="sceneOnOff":
-                    self.sceneOnOff(event)
+                    self.sceneOnOff(event.payload["data"],event.payload["targetState"])
             elif event.prefix=="O-EVT":
                 self.progressEvent(event)
             else: 
                 newEvent=eg.TriggerEnduringEvent(prefix="O-EVT",suffix="PC."+event.prefix+"."+event.suffix,payload=[self.plugin.thisPc,event.payload])
-                event.AddUpFunc(self.UpFunc,newEvent)
+                #event.AddUpFunc(self.UpFunc,newEvent)
+                thread = Thread(
+                    target=self.forwardShouldEnd,
+                    args=(event,newEvent, )
+                )
+                thread.start()
                 
 
+    def forwardShouldEnd(self, oldEvent, newEvent):
+        while not oldEvent.shouldEnd.isSet() and not newEvent.shouldEnd.isSet():
+            time.sleep(0.01)
+        newEvent.SetShouldEnd()
+    
+    
     def progressEvent(self, event):
         tempEvent=event.suffix
         suffparts=tempEvent.split(".")
@@ -4456,9 +5258,8 @@ class LogWrapper():
         self.plugin.sceneAction(id,0,False,behave)
         
       
-    def sceneOnOff(self, event):
-        id=int(event.payload["data"])
-        mode=event.payload["targetState"]
+    def sceneOnOff(self, id, mode):
+        id=int(id)
         if mode=="[off]":
             eg.plugins.SchedulGhost.DisableSchedule(u'scene'+unicode(id))
             eg.plugins.SchedulGhost.DataToXML()

@@ -12,11 +12,12 @@ import psutil
 from time import sleep
 
 #lib
-LIB_VERSION=1.17
+LIB_VERSION=1.19
 
 SYSTEM_TEMPLATES=["winpc","winpcbrowser","winpcbrowser2","winpcmousekeyboard","default1","default2","defaultMenu1","defaultMenu2","changeUser","guiSettings","executeCommand","configuration"]
 SYSTEM_EXTENSIONS=["PC_WIN","Ping","Generic_Prog","Pseudo_Device"]
 REG_PATH = r'Software\EventGhost\O-MEGA'
+ALL_CONFIG_FILES=["pages.json","mediaCfg.json","statesCfg.json","users.json","extensionsCfg.json","views.json","programs.json","devices.json","templatesCfg.json","interfaces.json"]
 
 class Template():
     def __init__(self, name, version, parent, json, extension, html):
@@ -280,6 +281,12 @@ def installPackage(filename):
     for plugin in egAutostart.findall("Plugin"):
         loadedPlugins.append(plugin.get("Identifier"))
     #import set to extensionsCfg.json
+    if "config/metadata.json" in zf.namelist():
+        data = zf.read("config/extensionsCfg.json")
+        jsonObj = json.loads(data)
+        oldLibVersion=jsonObj["LIB_VERSION"]
+    else:
+        oldLibVersion=1.0
     if "config/extensionsCfg.json" in zf.namelist():
         data = zf.read("config/extensionsCfg.json")
         jsonObj = json.loads(data)
@@ -417,6 +424,10 @@ def exportTemplate(filename, templates, extensions):
     os.mkdir(tempEventghostFolder)
     os.mkdir(tempHtmlFolder)
     #print tempFolder
+    metaDataFileName = tempConfigFolder+"\\metadata.json"
+    metaDataFile = open(metaDataFileName, "w")
+    json.dump({"LIB_VERSION":LIB_VERSION}, metaDataFile)
+    metaDataFile.close()
     #get templatesCfg.json content
     tempTemplatesCfgJsonFileName = tempConfigFolder+"\\templatesCfg.json"
     templatesJsonList = []
@@ -468,7 +479,7 @@ def exportTemplate(filename, templates, extensions):
     temEGImportXmlFile.close()
     #get HTML files
     for template in templates:
-        if template.html and template.html[0] == "/":
+        if template.html and template.html[0:11] == "/templates/":
             htmlSrcFolder = os.path.dirname(getOmegaHome()+"\\web"+template.html.replace("/", "\\"))
             targetFolder = os.path.join(tempHtmlFolder, os.path.basename(htmlSrcFolder))
             #os.mkdir(targetFolder)
@@ -482,8 +493,34 @@ def exportTemplate(filename, templates, extensions):
     zipf.close()
     shutil.rmtree(tempFolder)
     return True
- 
- 
+
+def updateConfigFiles05():
+    omegaLocation = getOmegaHome()
+    if not omegaLocation:
+        msgBox("ERROR","Could not read O-MEGA Configuration Directory!","error")
+        return False
+    dictFile = open(omegaLocation+"\\web\\config\\dictionary.json", "r")
+    dict = json.load(dictFile)
+    dictFile.close()
+    for fileName in ALL_CONFIG_FILES:
+        try:
+            file=open(omegaLocation+u'\\web\\config\\'+fileName,'r')
+        except:
+            continue
+        finally:
+            data=json.load(file)
+            file.close()
+            data=updateConfigFile05(data,fileName,dict)
+            file=open(omegaLocation+u'\\web\\config\\'+fileName,'w')
+            json.dump(data,file)
+            file.close()
+    
+def updateConfigFile05(data,fileName,dict):
+    for i in xrange(len(data)):
+        if isinstance(data[i][0], basestring):
+           data[i][0]=[data[i][0],dict[fileName+"names"][data[i][0]]]
+    return data
+           
 def checkIfEventGhostIsClosed():
     retry=True
     while retry:
