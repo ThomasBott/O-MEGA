@@ -19,6 +19,8 @@ configData["startFullscreen"]=top.userSettings["startFullscreen"];
 configData["lockDashboard"]=top.userSettings["lockDashboard"];
 configData["backgroundPath"]=top.userSettings["backgroundPath"];
 configData["defaultView"]=top.userSettings["defaultView"];
+configData["returnToPage"]=top.userSettings["returnToPage"];
+configData["returnToView"]=top.userSettings["returnToView"];
 var availableLanguages=[0,1];
 var onOffMapping=[true,false];
 var onOffMapping1={true:"[on]",false:"[off]"};
@@ -108,6 +110,14 @@ function defaultViewPrint(){
 function defaultViewValuePrint(newVal){
   configData["defaultView"]=newVal||configData["defaultView"];
   var content='<select class="default p1 w3" id="defaultView">';
+  var tempVal="<last_selected>";
+  var tempText=top.getText('guiSettings',tempVal);
+  if (configData["defaultView"]==tempVal){
+    content+='<option value="'+tempVal+'" selected="selected">'+tempText+'</option>';
+  }
+  else{
+    content+='<option value="'+tempVal+'">'+tempText+'</option>';
+  }
   for (var i=0; i<top.user["views"].length; i++){
     var tempVal=top.user["views"][i];
     var tempText=top.getText('views.json',tempVal);
@@ -161,6 +171,12 @@ function saveF(){
   top.userSettings1["dashReturnTimeout"]="[deviceSetting]";
   top.userSettingsDevice["dashReturnTimeout"]=parseInt(document.getElementById("dashReturnTimeoutBox").value);
   
+  top.userSettings1["returnToPage"]="[deviceSetting]";
+  top.userSettingsDevice["returnToPage"]=configData["returnToPage"];
+  
+  top.userSettings1["returnToView"]="[deviceSetting]";
+  top.userSettingsDevice["returnToView"]=configData["returnToView"];
+  
   top.saveUserSettings(function(){top.location.reload();});
 }
 
@@ -176,15 +192,19 @@ function clearAll(){
   setConfig("useFullscreen",false);
   setConfig("startFullscreen",false);
   setConfig("lockDashboard",false);
+  setConfig("returnToPage",true);
+  setConfig("returnToView",false);
 }
 
 omega.OnUpdate(function(ext){
-  if (ext=="reload"){
+  if (ext=="reload"||ext=="load"){
     choosenLanguage=top.userSettings["language"];
     configData["config"]=top.userSettings["advancedConfig"];
     configData["useFullscreen"]=top.userSettings["useFullscreen"];
     configData["startFullscreen"]=top.userSettings["startFullscreen"];
     configData["lockDashboard"]=top.userSettings["lockDashboard"];
+    configData["returnToPage"]=top.userSettings["returnToPage"];
+    configData["returnToView"]=top.userSettings["returnToView"];
     backgroundPathValuePrint(top.userSettings["backgroundPath"]);
     defaultViewValuePrint(top.userSettings["defaultView"]);
     document.getElementById("effectTimeBox1").value=top.userSettings["effectTimePage"];
@@ -195,22 +215,16 @@ omega.OnUpdate(function(ext){
     configPrint("useFullscreen");
     configPrint("startFullscreen");
     configPrint("lockDashboard");
+    configPrint("returnToPage");
+    configPrint("returnToView");
   }
 });
 
 omega.OnLoad(function(){
-  languagesPrint();
-  configPrint("config");
-  configPrint("useFullscreen");
-  configPrint("startFullscreen");
-  configPrint("lockDashboard");
   effectTimePrint();
   dashReturnTimeoutPrint();
   backgroundPathPrint();
   defaultViewPrint();
-  document.getElementById("effectTimeBox1").value=top.userSettings["effectTimePage"];
-  document.getElementById("effectTimeBox2").value=top.userSettings["effectTimeSlide"];
-  document.getElementById("dashReturnTimeoutBox").value=top.userSettings["dashReturnTimeout"];
   document.getElementById("okB").innerHTML = '<button class="p1 w2 default Hgreen" onClick="saveF();">'+top.getText('saveChanges',0)+'</button>';
   document.getElementById("clearB").innerHTML = '<button class="p1 w2 default Hred" onClick="clearAll();">'+top.getText('clearSettings',0)+'</button>';
 });
@@ -239,7 +253,7 @@ omega.OnLoad(function(){
           <tr>
             <td colspan="2" id="languageContent"></td>
             <td colspan="2" id="configContent"></td>
-            <td colspan="2" id="useFullscreenContent"></td>
+            <td colspan="2" ></td>
           </tr>
           <tr class="HSpace big"></tr>
           <tr>
@@ -253,9 +267,15 @@ omega.OnLoad(function(){
           </tr>
           <tr class="HSpace big"></tr>
           <tr>
+            <td colspan="2" id="useFullscreenContent"></td>
             <td colspan="2" id="startFullscreenContent"></td>
             <td colspan="2" id="lockDashboardContent"></td>
+          </tr>
+          <tr class="HSpace big"></tr>
+          <tr>
             <td valign="top" colspan="2" id="dashReturnTimeoutContent"></td>
+            <td colspan="2" id="returnToPageContent"></td>
+            <td colspan="2" id="returnToViewContent"></td>
           </tr>
         </table>
       </td>

@@ -76,7 +76,7 @@ $.ajaxSetup({
 });
 
 var dictLoaded=false;
-$.post("/config/dictionary.json","request", function(data){
+$.post("/config/dictionary2.json","request", function(data){
   if (typeof data === 'object'){
     text2=data;
   }
@@ -86,6 +86,20 @@ $.post("/config/dictionary.json","request", function(data){
   for (var attrname in text2) { text[attrname] = text2[attrname]; }
   dictLoaded=true;
   loadRest();
+}).fail(function(jqXHR, textStatus, errorThrown){
+    if(jqXHR.status == 404) {
+        $.post("/config/dictionary.json","request", function(data){
+          if (typeof data === 'object'){
+            text2=data;
+          }
+          else{
+            text2=JSON.parse(data);
+          }
+          for (var attrname in text2) { text[attrname] = text2[attrname]; }
+          dictLoaded=true;
+          loadRest();
+        });
+    }
 });
 
 var filesLoaded=false;
@@ -250,6 +264,8 @@ var userSettings;
 var userSettings1;
 var userSettingsDevice;
 var userSettingsDeviceAll;
+var startCView="";
+var startCPage="dashboard";
 $.post("/config/users.json","request", function(data){
     if (typeof data === 'object'){
       users=data;
@@ -288,23 +304,27 @@ $.post("/config/users.json","request", function(data){
     else if(user["parameters"]["isAdmin"]==1){
         user["parameters"]["isSceneEditor"]=1;
     }
-    $.post("/config/userSettings.json","request", function(data){
-      if (typeof data === 'object'){
-        userSettings1=data;
-      }
-      else{
-        userSettings1=JSON.parse(data);
-      }
+    loadUserSettings(function(){
+        loadViews(function(){
+            loadRest();
+        });
+    });
+});
+
+function loadUserSettings(callback){
+    $.post('/empty', JSON.stringify({"method":"getUserSettings","args":[user["id"],"all"]}), function(data){
       if (typeof localStorage.userSettings === 'undefined'){
         userSettingsDeviceAll={}
       }
       else{
         userSettingsDeviceAll=JSON.parse(localStorage.userSettings);
       }
-      if (typeof userSettings1[user["id"]]=="undefined"){
-        userSettings1[user["id"]]={};
+      if (typeof data=="undefined"){
+        userSettings1={};
       }
-      userSettings1=userSettings1[user["id"]];
+      else{
+          userSettings1=data;
+      }
       if (typeof userSettings1["dashData"]=="undefined"){
         userSettings1["dashData"]={};
       }
@@ -382,8 +402,21 @@ $.post("/config/users.json","request", function(data){
       else if (userSettings["dashReturnTimeout"]<10){
         userSettings["dashReturnTimeout"]=10;
       }
+      if (typeof userSettings["returnToPage"]=="undefined"){
+        userSettings["returnToPage"]=true;
+      }
+      if (typeof userSettings["returnToView"]=="undefined"){
+        userSettings["returnToView"]=false;
+      }
       userSettingsLoaded=true;
-      $.post("/config/views.json","request", function(data){
+      if (callback){
+          callback();
+      }
+    });
+}
+
+function loadViews(callback){
+    $.post("/config/views.json","request", function(data){
         if (typeof data === 'object'){
           views=data;
         }
@@ -393,32 +426,53 @@ $.post("/config/users.json","request", function(data){
         if (user["parameters"]["isAdmin"]==1){
           user["views"].push("-");
         }
-        viewChoosen=user["views"][0];
-        var tempWindowHash=window.location.hash;
-        for (var i=0; i<user["views"].length; i++){
-          if (tempWindowHash=="#view"+user["views"][i]){
-            viewChoosen=user["views"][i];
-            break;
-          }
-          else if (user["views"][i]==userSettings["defaultView"]){
-            viewChoosen=userSettings["defaultView"];
-          }
-        } 
-        for (var i=0; i<views.length; i++){
-          viewsIDArray[views[i][0]]=i;
-          if(views[i][0]==viewChoosen){
-            primHifiID=views[i][1];
-          }
-        }
         viewsLoaded=true;
-        loadRest();
-      });
+        if (callback){
+            callback();
+        }
     });
-});
+}
 
 var loadRestNotLoaded=true;
 function loadRest(){
-  if (loadRestNotLoaded&&filesLoaded&&indexLoaded&&dictLoaded&&interfacesLoaded&&programsLoaded&&statesLoaded&&userSettingsLoaded&&chooseFrameLoaded&&topFrameLoaded&&viewsLoaded&&devicesLoaded){
+  if (loadRestNotLoaded&&filesLoaded&&indexLoaded&&dictLoaded&&interfacesLoaded&&programsLoaded&&statesLoaded&&userSettingsLoaded&&chooseFrameLoaded&&viewsLoaded&&devicesLoaded){
+    viewChoosen=user["views"][0];
+    if (userSettings["defaultView"]=="<last_selected>"){
+        if (typeof userSettings["selectedView"]!="undefined"){
+            startCView=userSettings["selectedView"];
+        }
+    }
+    var tempWindowHashs=window.location.hash.substr(1).split("&");
+    var tempWindowHash;
+    var startedWithCView=false;
+    for (tempWindowHash of tempWindowHashs){
+        if (tempWindowHash.substr(0,5)=="view="){
+            startCView=tempWindowHash.substr(5);
+            startedWithCView=true;
+        }
+        else if (tempWindowHash.substr(0,5)=="page="){
+            startCPage=tempWindowHash.substr(5);
+        }
+    }
+    for (var i=0; i<user["views"].length; i++){
+      if (startCView==user["views"][i]){
+          viewChoosen=startCView;
+          if (typeof userSettings["selectedView"]=="undefined" || startedWithCView && startCView!=userSettings["selectedView"]){
+              $.post('/empty', JSON.stringify({"method":"saveUserSettings","args":[user["id"],"selectedView",startCView]}));
+          }
+          break;
+      }
+      else if (user["views"][i]==userSettings["defaultView"]){
+          viewChoosen=userSettings["defaultView"];
+      }
+    }
+    for (var i=0; i<views.length; i++){
+      viewsIDArray[views[i][0]]=i;
+      if(views[i][0]==viewChoosen){
+        primHifiID=views[i][1];
+      }
+    }
+    startCView=viewChoosen;
     loadRestNotLoaded=false;
     reloadF("load");
     hifiInit();
@@ -427,7 +481,7 @@ function loadRest(){
     //window.frames["topframe"].StartUp2();
     //window.frames["chooseframe"].StartUp2();
     framesetPrinter();
-    $(document.getElementById('topframehide')).slideDown(top.userSettings["effectTimeSlide"],loadRest2());
+    loadRest2();
     if (top.userSettings["backgroundPath"]!=""){
       $(document.body).addClass("backgroundImage");
       $(document.body).css("background-image","url(/img/background/"+top.userSettings["backgroundPath"]+")");
@@ -436,10 +490,11 @@ function loadRest(){
 }
 
 function loadRest2(){
-  openPage('dashboard',false,userSettings["startFullscreen"]);
+  openPage(startCPage,false,userSettings["startFullscreen"]);
   if (!userSettings["startFullscreen"]){
     hidechooseframeall(0,true);
   }
+  setTimeout(function(){$(document.getElementById("topframehide")).show(top.userSettings["effectTimeSlide"]);},top.userSettings["effectTimeSlide"]);
 }
 
 //-----------mainframeStart---------------//
@@ -1187,15 +1242,17 @@ function reloadF(ext){
   allBrowserLoad();
   dataUpdate(ext);
   if (ext=="reload"){
-    actuallyPlayingUpdate(ext);
-    calculatePageStates();
-    indexReload(ext);
-    vole(ext);
-    if (touchDevice && !fullFullscreenEnabled && top.userSettings["useFullscreen"]){
-      fullFullscreen(1);
-      setTimeout('getGlobalWindowSize();',400);
-    }
-    top.frames['chooseframe'].timeUpdate();
+    loadUserSettings(function(){
+        actuallyPlayingUpdate(ext);
+        //calculatePageStates();
+        indexReload(ext);
+        vole(ext);
+        if (touchDevice && !fullFullscreenEnabled && top.userSettings["useFullscreen"]){
+          fullFullscreen(1);
+          setTimeout('getGlobalWindowSize();',400);
+        }
+        top.frames['chooseframe'].timeUpdate();
+    });
     resetDashReturnTimeout();
   }
 }
@@ -1459,7 +1516,7 @@ function uniUpdate(id,varInBackend,targetFunctionName,targetFunction){
 
 function sceneRemove(state,nr){
   if(state){
-    if(!user["parameters"]["isSceneEditor"] || scenesIds[nr][7]==1){
+    if(!user["parameters"]["isSceneEditor"] || scenesIds[scenesFind[nr]][7]==1){
       console.log("Cannot delete scene, Access Denied!");
       return false;
     }
@@ -1601,6 +1658,7 @@ var openPageTimer;
 var openPageMainCall=[];
 var framesArrayPointer=-1;
 var buttonViewsForPage={};
+var lastOpenedPage;
 
 function openPageInit(){
 	for (var i=0; i<files.length; i++){
@@ -1716,6 +1774,7 @@ function openPageInit(){
 }
 
 function pageOpened(frameID,pageOmega){
+  lastOpenedPage=frameID;
   if (typeof pageOmega!="undefined"){
     omega.fileID[frameID]=pageOmega;
     pageOmega.advancedPageNumber=openPageMainCall[2];
@@ -2128,6 +2187,7 @@ function fullscreen(onOff,id){
         //$(document.getElementById("backButton")).show(top.userSettings["effectTimeSlide"]);
         $(top.frames["topframe"].document.getElementById("fullscreenLeaver")).show();
         fullFullscreen(1);
+        top.frames["topframe"].window.scrollTo(0, 0);
       }
     }
   }
@@ -2171,9 +2231,14 @@ function closeEventLog(data){
 
 function resetDashReturnTimeout(){
     clearTimeout(dashReturnTimeout);
-    if (userSettings["dashReturnTimeout"] && choosenFramesetPageArray['index']!=filesIDArray["dashboard"] && !recording){
+    if (userSettings["dashReturnTimeout"] && (lastOpenedPage!=startCPage && userSettings["returnToPage"] || viewChoosen!=startCView && userSettings["returnToView"]) && !recording){
         dashReturnTimeout = setTimeout(function(){
-            top.openPage("dashboard");
+            if(userSettings["returnToView"]){
+                top.frames['topframe'].selectView(startCView,true);
+            }
+            if(userSettings["returnToPage"]){
+                top.openPage(startCPage);
+            }
         },parseInt(userSettings["dashReturnTimeout"])*1000);
     }
 }
@@ -2782,7 +2847,9 @@ function showNumberBox(lable,callbackFunction,preData,minimum,maximum,step){
   if (boxWidth<169){
     boxWidth=169;
   }
-  TINY.box.show({html:'<center><table border="0" cellpadding="0" cellspacing="0"><tr><td align="center"><div id="numberBoxChangeContent"></div></td></tr><tr><td align="right"><table class="stdtable" cellpadding="0" cellspacing="0"><tr><td><button class="p1 w2 default" onClick="numberBoxChangeOk();" accesskey="O">'+getText('ok',0)+'</button></td><td><button class="p1 w2 default" onClick="TINY.box.hide();" accesskey="C">'+getText('cancel',0)+'</button></td></tr></table></td></tr></table></center>',boxid:'numberBoxChange',maskid:'whitemask',width:boxWidth,height:153,opacity:30,animate:true,close:false,openjs:function(){numberBoxChangeLoad();},closejs:function(){numberBoxClose(lable,callbackFunction);}});
+  console.log(lable);
+  var tempLable=lable.split(":");
+  TINY.box.show({html:tempLable[tempLable.length-1]+':<br><center><table border="0" cellpadding="0" cellspacing="0"><tr><td align="center"><div id="numberBoxChangeContent"></div></td></tr><tr><td align="right"><table class="stdtable" cellpadding="0" cellspacing="0"><tr><td><button class="p1 w2 default" onClick="numberBoxChangeOk();" accesskey="O">'+getText('ok',0)+'</button></td><td><button class="p1 w2 default" onClick="TINY.box.hide();" accesskey="C">'+getText('cancel',0)+'</button></td></tr></table></td></tr></table></center>',boxid:'numberBoxChange',maskid:'whitemask',width:boxWidth,height:170,opacity:30,animate:true,close:false,openjs:function(){numberBoxChangeLoad();},closejs:function(){numberBoxClose(lable,callbackFunction);}});
 }
 
 function numberBoxChangeLoad(){
@@ -3114,6 +3181,7 @@ function sceneRecordStart(nr,forwardCom,data,condition,insertPaus,selectedLine){
   recording=true;
   conditionMode=condition;
   //top.frames['chooseframe'].tablePrint();
+  loadedFiles=[];
   indexReload('reload');
   //alarmAdvancedBdataOld=top.frames['topframe'].document.getElementById('advanced').innerHTML;
   //top.frames['topframe'].document.getElementById('advanced').innerHTML='<button class="p1 w2 default" onClick="top.showAdvancedAlarmBox()">'+top.getText('advanced',0)+'</button>';
@@ -3155,14 +3223,15 @@ function sceneRecordEnd(ext,site){
   conditionMode=false;
   top.frames['chooseframe'].sceneOnRecord(-1);
   //top.frames['chooseframe'].tablePrint();
+  loadedFiles=[];
   //indexReload('reload');
   //top.frames['topframe'].document.getElementById('advanced').innerHTML=alarmAdvancedBdataOld;
   if (site!==false){
     openPage("scene",false,false,true,site);
   }
-  else{
-    indexReload('reload');
-  }
+  //else{
+  //  indexReload('reload');
+  //}
 }
 
 function sceneActionsSave(nr,data){
@@ -3190,7 +3259,7 @@ function saveUserSettings(callbackFunction,wait){
   else{
     userSettingsDeviceAll[user["id"]]=userSettingsDevice;
     localStorage.userSettings=JSON.stringify(userSettingsDeviceAll);
-    $.post('/empty', JSON.stringify({"method":"saveUserSettings","args":[encodeURIComponent(user["id"]),encodeURIComponent(JSON.stringify(userSettings1))]}), saveUserSettings2(callbackFunction));
+    $.post('/empty', JSON.stringify({"method":"saveUserSettings","args":[user["id"],"all",userSettings1]}), saveUserSettings2(callbackFunction));
   }
 }
 
@@ -3235,8 +3304,14 @@ function Request(eventname,time,shadow,lable){
   }
   else{
     var tevent=JSON.parse(eventname);
+    eventname=JSON.stringify(tevent);
     if (tevent["method"]=="TriggerEnduringEvent" || tevent["method"]=="TriggerEvent"){
       tevent["kwargs"]["prefix"]="O-MEGA";
+      if (typeof tevent["kwargs"]["payload"]=="undefined"){
+        tevent["kwargs"]["payload"]={};
+      }
+      tevent["kwargs"]["payload"]["view"]=viewChoosen;
+      tevent["kwargs"]["payload"]["user"]=user["id"];
     }
     if (shadow==2){
       if (recording==false || forwardCommands){
@@ -3252,7 +3327,7 @@ function Request(eventname,time,shadow,lable){
       }
     }
     else if (recording || (dashEditing && dashGoer==false)){
-      var temArr=[JSON.stringify(JSON.parse(eventname)["kwargs"]),sceneSelectedLevel,0];
+      var temArr=[JSON.stringify(tevent["kwargs"]),sceneSelectedLevel,0];
       if (lable){
         temArr.push(lable);
       }

@@ -7,6 +7,9 @@ var omega={
       console.log("omega.GetText: Parameter \"text\" is undefined!");
       return "undefined";
     }
+    if (typeof o.mode=="undefined"){
+        o.mode=0;
+    }
     if (typeof o.language=="undefined"){
       o.language=top.userSettings["language"];
     }
@@ -108,7 +111,7 @@ var omega={
       eventname=top.sysName+eventname;
     }
     //console.log(eventname);
-    tempParameters = {"target":tempid,"targetState":targetState,"view":top.viewChoosen}
+    tempParameters = {"target":tempid,"targetState":targetState};
     if ((Array.isArray(data) || typeof data=="string") && data.length==0){
     }
     else{
@@ -235,17 +238,13 @@ var omega={
       console.log("omega.ShowNumberBox: Parameter \"command\" and \"callback\" are undefined, at least one of them need to be defined!");
       return false;
     }
-    else if (typeof o.command=="undefined" && typeof o.variable=="undefined"){
-      console.log("omega.ShowNumberBox: Parameter \"command\" and \"variable\" are undefined, at least one of them need to be defined!");
-      return false;
-    }
     var target=o.target||omega.getThisTarget();
     var callbackFunction=o.callback||omega.createEventExecute(o.command,o.data);
     var minimum=o.min||0;
     var maximum=o.max||100;
     var step=o.step||1;
     var preData=o.preset||minimum;
-    if(top.conditionMode && top.recording){
+    if(top.conditionMode && top.recording && (typeof o.command!="undefined" || typeof o.variable!="undefined")){
       if (typeof o.selectedObject=="object"){
         $(o.selectedObject).addClass("blinking");
         callbackFunction=omega.createBlinkingCallback(o.selectedObject);
@@ -713,9 +712,9 @@ var omega={
         }
       }
     }
-    //if (ext=="load" && omega.buttonsCreated==false){
-      //omega.createButtons();
-    //}
+    if (ext=="reload"){
+      omega.createButtons();
+    }
     omega.updateButtons();
     for (var i in omega.onUpdateArray){
       omega.onUpdateArray[i].func(ext);
@@ -843,8 +842,14 @@ var omega={
                           enduringButton=true;
                         }
                       }
-                      else if (top.dashEditing && (tempScope.length==2 || typeof thisButton[5]["[on]"]!="undefined" && typeof thisButton[5]["[off]"]!="undefined" && typeof thisButton[5]["[toggle]"]=="undefined")){
-                        actionString=' onmouseup="omega.TriggerAction({command:\'buttons\',targetState:\''+tempScope[0]+'\',possibleStates:[\''+tempScope[0]+'\',\''+tempScope[1]+'\',\'[toggle]\'],target:\''+currentId2+'\',multi:true,selectedObject:this});"';//#click#
+                      else if (top.dashEditing && tempScope.length==2){
+                        actionString=' onmouseup="omega.TriggerAction({command:\'buttons\',targetState:\''+thisStateId2+'\',possibleStates:[\''+tempScope[0]+'\',\''+tempScope[1]+'\',\'[toggle]\'],target:\''+currentId2+'\',multi:true,selectedObject:this});"';//#click#
+                      }
+                      else if (top.dashEditing && (thisStateId2=="[on]" || thisStateId2=="[off]") && (typeof thisButton[5]["[on]"]!="undefined" && typeof thisButton[5]["[off]"]!="undefined") && typeof thisButton[5]["[toggle]"]=="undefined"){
+                        actionString=' onmouseup="omega.TriggerAction({command:\'buttons\',targetState:\''+thisStateId2+'\',possibleStates:[\'[on]\',\'[off]\',\'[toggle]\'],target:\''+currentId2+'\',multi:true,selectedObject:this});"';//#click#
+                      }
+                      else if (top.dashEditing && (thisStateId2=="[open]" || thisStateId2=="[close]") && (typeof thisButton[5]["[open]"]!="undefined" && typeof thisButton[5]["[close]"]!="undefined") && typeof thisButton[5]["[toggle]"]=="undefined"){
+                        actionString=' onmouseup="omega.TriggerAction({command:\'buttons\',targetState:\''+thisStateId2+'\',possibleStates:[\'[open]\',\'[close]\',\'[toggle]\'],target:\''+currentId2+'\',multi:true,selectedObject:this});"';//#click#
                       }
                       else{
                         tempEventData={command:'buttons',targetState:thisStateId2,target:currentId2};
@@ -922,6 +927,7 @@ var omega={
                   buttonMode=thisButton[7][thisStateId]["buttonModes"][0]["mode"]||"std";
                   buttonModeSettings=thisButton[7][thisStateId]["buttonModes"][0]["modeSettings"]||"";
                   rename=thisButton[7][thisStateId]["rename"]||"";
+                  rename=rename.split(",")[0];
                 }
                 var tempTarget=document.getElementById(count+":"+(j+1)+'B2');
                 $(document.getElementById(count+":"+(j+1)+'B')).show();
@@ -1667,7 +1673,7 @@ $(document).ready(function(){
   if (omega.pageID!="system"){
     if (omega.pageTitleIsHidden==false){
       if (typeof top.files[top.filesIDArray[omega.pageID]][4][top.primHifiID]!="undefined" && top.files[top.filesIDArray[omega.pageID]][4][top.primHifiID][0]!="" && typeof top.States["devices"][top.primHifiID]["input"]!="undefined"){
-        $(document.body).prepend('<div id="titleC" onClick="top.Request(JSON.stringify({\'method\':\'TriggerEvent\',\'kwargs\':{\'suffix\':\'EXT.'+top.devices[top.devicesIDArray[top.primHifiID]][3]+'.devices.'+top.devices[top.devicesIDArray[top.primHifiID]][1]+'.input\',\'payload\':{\'target\':\''+top.primHifiID+'\',\'targetState\':\'[value]\',\'targetValue\':[\''+top.files[top.filesIDArray[omega.pageID]][4][top.primHifiID][0]+'\'],\'data\':{\'inputId\':\''+top.files[top.filesIDArray[omega.pageID]][4][top.primHifiID][0]+'\'}}}}));" class="title1">'+omega.PAGE_TITLE+':</div>');
+        $(document.body).prepend('<div id="titleC" onClick="top.Request(JSON.stringify({\'method\':\'TriggerEvent\',\'kwargs\':{\'suffix\':\'EXT.'+top.devices[top.devicesIDArray[top.primHifiID]][3]+'.devices.'+top.devices[top.devicesIDArray[top.primHifiID]][1]+'.input\',\'payload\':{\'target\':\''+top.primHifiID+'\',\'targetState\':\'[value]\',\'targetValue\':[\''+top.files[top.filesIDArray[omega.pageID]][4][top.primHifiID][0]+'\',null,null,null]}}}));" class="title1">'+omega.PAGE_TITLE+':</div>');
       }
       else{
           $(document.body).prepend('<div id="titleC" class="title1">'+omega.PAGE_TITLE+':</div>');

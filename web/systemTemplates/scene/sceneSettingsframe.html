@@ -116,12 +116,7 @@ function PChooseunselect(st){
 }
 
 function PChooseOK(){
-  var result="[";
-  for (var item in listChooserSelectedArray){
-    result+='"'+listChooserSelectedArray[item]+'",';
-  }
-  result=result.slice(0,-1)+"]";
-  sceneSetting(settingsMappings["views"],result);
+  sceneSetting(settingsMappings["views"],listChooserSelectedArray);
   TINY.box.hide();
 }
 
@@ -133,7 +128,7 @@ function rename(button){
     return false;
   }
   $(button).addClass('blinking');
-  omega.ShowInputBox({text:top.getText('rename',0),callback:rename2(top.sceneChoosen,button),preset:top.scenesIds[top.scenesFind[top.sceneChoosen]][1],parameters:{type:"text",maxlength:"18"}});
+  omega.ShowInputBox({text:top.getText('rename',0),callback:rename2(top.sceneChoosen,button),preset:top.scenesIds[top.scenesFind[top.sceneChoosen]][1],parameters:{type:"text"}});
   return true;
 }
 

@@ -182,7 +182,7 @@ var text={
     {
         0:["Normal","Normal"],
         1:["Show confirmation dialog","Zeige Best&auml;tigungsdialog"],
-        2:["Slide in directions (touch only)","In Richtungen wischen (nur Touch)"],
+        2:["Slide in directions","In Richtungen wischen"],
         "tileMode":["Tile Mode","Kachel Modus"]
     },
   "date":
@@ -212,6 +212,7 @@ var text={
     },
   "devframe":
     {
+      "applyValueToAllStates":["Apply value to all states","Wert auf alle states anwenden"],
       "devices.json":["Devices","Ger&auml;te"],
       "interfaces.json":["Interfaces","Schnittstellen"],
       "programs.json":["Programs","Programme"],
@@ -219,6 +220,7 @@ var text={
       "views.json":["Views","Ansichten"],
       "users.json":["Users","Benutzer"],
       "actions":["Actions","Aktionen"],
+      "action":["Action","Befehl"],
       "actionButtonCommandParameters":["Action command parameters","Parameter f&uuml;r Aktionsbefehle"],
       "actionButtonResponses":["Action feedback events","Antwort-ereignisse f&uuml;r Aktionen"],
       "actionButtonParameters":["Action button parameters","Parameter f&uuml;r Aktionskn&ouml;pfe"],
@@ -242,7 +244,7 @@ var text={
       "frameToBeOpenedIn":["Frame to be opened in","Frame in dem es ge&ouml;ffnet wird"],
       "frontend":["Frontend","Frontend"],
       "fullscreen":["Fullscreen","Vollbild"],
-      "HiFi":["HiFi inputs","HiFi Eing&auml;nge"],
+      "HiFi":["A/V inputs","A/V Eing&auml;nge"],
       "id":["ID","ID"],
       "idOfParent":["Parent (if any)","Elternteil"],
       "invisibleButton":["Can't be choosen","Nicht w&auml;hlbar"],
@@ -253,13 +255,14 @@ var text={
       "mode":["Mode","Modus"],
       "nameId":["Name(<font style='color:red'>ID</font>)","Name(<font style='color:red'>ID</font>)"],
       "parameters":["Parameters","Parameter"],
-      "primeAudio":["Primary HiFi", "Prim&auml;r HiFi"],
+      "primeAudio":["Primary A/V", "Prim&auml;r A/V"],
       "possibleValues":["Possible values","M&ouml;gliche Werte"],
       "responseInBackend":["Feedback events","Antwort-ereignisse"],
       "returnDescription":["Return Description","R&uuml;ckgabebeschreibung"],
       "returnType":["Return Type","R&uuml;ckgabetyp"],
       "returns":["Returns","R&uuml;ckgabewert"],
       "requiredPlugins":["Required plugins", "Ben&ouml;tigte Plugins"],
+      "room":["Room", "Raum"],
       "scope":["Scope", "Zust&auml;nde"],
       "settings":["Settings","Einstellungen"],
       "setPW":["Set password","Passwort setzen"],
@@ -273,8 +276,10 @@ var text={
       "targetType":["Target type","Ziel Typ"],
       "template":["Template","Vorlage"],
       "type":["Type","Typ"],
+      "useValueFrom":["Use value from...","Benutze wert von..."],
       "version":["Version","Version"],
-      "views":["Views","Ansichten"]
+      "views":["Views","Ansichten"],
+      "masterAudioAction":["Master Audio action","Master Audio Befehl"]
     },
   "devframeButtonTypes":
     {
@@ -346,8 +351,11 @@ var text={
     {0:["Forward<br>commands","Befehle<br>weiterleiten"]},
   "guiSettings":
     {
+      "<last_selected>":["&lt; Last Selected &gt;","&lt; Zuletzt Gew&auml;hlt &gt;"],
       "config":["Advanced Configuration","Erweiterte Konfiguration"],
-      "dashReturnTimeout":["Return to dashboard after sec.","Nach sek. zu dashboard zur&uuml;ckkehren"],
+      "dashReturnTimeout":["Timeout (sec.)","Timeout (sek.)"],
+      "returnToPage":["Return to start page after timeout","Nach Timeout zur Startseite zur&uuml;ckkehren"],
+      "returnToView":["Return to start view after timeout","Nach Timeout zur Startansicht zur&uuml;ckkehren"],
       "useFullscreen":["Use Fullscreen API","Verwende Fullscreen API"],
       "background":["Background Image","Hintergrundbild"],
       "defaultView":["Default view","Standardansicht"],
@@ -356,6 +364,8 @@ var text={
     },
   "hide":
     {0:["Hide","Verstecken"]},
+  "hifi":
+    {0:["A/V","A/V"]},
   "if":
     {0:["If","Wenn"]},
   "ifPyExpIsTrue":

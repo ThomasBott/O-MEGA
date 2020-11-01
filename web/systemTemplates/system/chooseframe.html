@@ -33,7 +33,7 @@ function hide(onOff){
 }
 
 function tablePrint(){
-  var contentvar='<table class="stdtable" border="0" cellpadding="0" cellspacing="0"><tr align="center"><td class="cutLeft"><button class="p2 w2 defaultNH">'+top.getText('mode',0)+':</button></td><td class="hideThis"><button class="p2 w1 defaultNH">'+top.getText('status',0)+':</button></td><td class="last hideThis"><button class="p2 w1 defaultNH">HiFi:</button></td></tr>';
+  var contentvar='<table class="stdtable" border="0" cellpadding="0" cellspacing="0"><tr align="center"><td class="cutLeft"><button class="p2 w2 defaultNH">'+top.getText('mode',0)+':</button></td><td class="hideThis"><button class="p2 w1 defaultNH">'+top.getText('status',0)+':</button></td><td class="last hideThis"><button class="p2 w1 defaultNH">'+top.getText('hifi',0)+':</button></td></tr>';
   for (var i=0; i<top.files.length; i++){
     if (top.files[i][1]=="-" || top.files[i][1]=="hide" && top.files[i][0]=="sceneFunctions"){
       contentvar+='<tr id="'+top.files[i][0]+'T"><td class="cutLeft"><div id="'+top.files[i][0]+'B"></div></td><td class="hideThis"><div id="'+top.files[i][0]+'S"></div></td><td class="last hideThis"><div id="'+top.files[i][0]+'H"></div></td></tr>';
@@ -84,10 +84,10 @@ omega.OnUpdate(function(ext){
         }
         else{
           if (top.files[i][4][top.primHifiID][0]==top.States["devices"][top.primHifiID]["input"]){
-            document.getElementById(top.files[i][0]+'H').innerHTML = '<button class="p1 w1 green" onClick="top.Request(JSON.stringify({\'method\':\'TriggerEvent\',\'kwargs\':{\'suffix\':\'EXT.'+top.devices[top.devicesIDArray[top.primHifiID]][3]+'.devices.'+top.devices[top.devicesIDArray[top.primHifiID]][1]+'.input\',\'payload\':{\'target\':\''+top.primHifiID+'\',\'targetState\':\'[value]\',\'targetValue\':[\''+top.files[i][4][top.primHifiID][0]+'\'],\'data\':{\'inputId\':\''+top.files[i][4][top.primHifiID][0]+'\'}}}}));"></button>';
+            document.getElementById(top.files[i][0]+'H').innerHTML = '<button class="p1 w1 green" onClick="top.Request(JSON.stringify({\'method\':\'TriggerEvent\',\'kwargs\':{\'suffix\':\'EXT.'+top.devices[top.devicesIDArray[top.primHifiID]][3]+'.devices.'+top.devices[top.devicesIDArray[top.primHifiID]][1]+'.input\',\'payload\':{\'target\':\''+top.primHifiID+'\',\'targetState\':\'[value]\',\'targetValue\':[\''+top.files[i][4][top.primHifiID][0]+'\',null,null,null]}}}));"></button>';
           }
           else{
-            document.getElementById(top.files[i][0]+'H').innerHTML = '<button class="p1 w1 default" onClick="top.Request(JSON.stringify({\'method\':\'TriggerEvent\',\'kwargs\':{\'suffix\':\'EXT.'+top.devices[top.devicesIDArray[top.primHifiID]][3]+'.devices.'+top.devices[top.devicesIDArray[top.primHifiID]][1]+'.input\',\'payload\':{\'target\':\''+top.primHifiID+'\',\'targetState\':\'[value]\',\'targetValue\':[\''+top.files[i][4][top.primHifiID][0]+'\'],\'data\':{\'inputId\':\''+top.files[i][4][top.primHifiID][0]+'\'}}}}));"></button>';
+            document.getElementById(top.files[i][0]+'H').innerHTML = '<button class="p1 w1 default" onClick="top.Request(JSON.stringify({\'method\':\'TriggerEvent\',\'kwargs\':{\'suffix\':\'EXT.'+top.devices[top.devicesIDArray[top.primHifiID]][3]+'.devices.'+top.devices[top.devicesIDArray[top.primHifiID]][1]+'.input\',\'payload\':{\'target\':\''+top.primHifiID+'\',\'targetState\':\'[value]\',\'targetValue\':[\''+top.files[i][4][top.primHifiID][0]+'\',null,null,null]}}}));"></button>';
           }
         }
       }
@@ -135,7 +135,7 @@ function sceneOnRecord(nr){
       recordButtonContent+=top.getText('scene',0)+'&nbsp;'+(nr+1)+':</button>';
     }
     else{
-      recordButtonContent+=top.scenesIds[top.scenesFind[nr]][1]+':</button>';
+      recordButtonContent+=top.scenesIds[top.scenesFind[nr]][1].split(",")[0]+':</button>';
     }
     try{
       document.getElementById('scene'+top.scenesFind[nr]).innerHTML=recordButtonContent;
@@ -154,7 +154,7 @@ function sceneButtonName(tempId){
     return top.getText('scene',0)+'&nbsp;'+(parseInt(tempId)+1);
   }
   else{
-    return top.scenesIds[top.scenesFind[tempId]][1];
+    return top.scenesIds[top.scenesFind[tempId]][1].split(",")[0];
   }
 }
 
@@ -261,7 +261,7 @@ function sceneLoad(ext){
                   buttonContent+=top.getText('scene',0)+'&nbsp;'+(parseInt(tempId)+1)+':</button>';
                 }
                 else{
-                  buttonContent+=top.scenesIds[top.scenesFind[tempId]][1]+':</button>';
+                  buttonContent+=top.scenesIds[top.scenesFind[tempId]][1].split(",")[0]+':</button>';
                 }
                 parent.frames['default'].omega.update(ext);
               }

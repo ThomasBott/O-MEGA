@@ -41,7 +41,7 @@ omega.OnUpdate(function(ext){
     sceneTitle=top.getText('files.json',omega.pageID)+'&nbsp;'+(i+1);
   }
   else{
-    sceneTitle=settings[settingsMappings["title"]];
+    sceneTitle=settings[settingsMappings["title"]].split(",")[0];
   }
   if (oldScene!=i){
     omega.PAGE_TITLE=sceneTitle+':<br>('+omega.pageID+i+')';

@@ -76,7 +76,13 @@ function tilePrinter(){//["{\"suffix\":\"CMD.buttons\",\"payload\":{\"target\":\
             $(tempElement).on("touchstart", slideStart);
         }
         else{
-            contentvar+=' onClick="runControl('+i+');"';
+            //contentvar+=' onClick="runControl('+i+');"';
+            $(tempElement).on("mousedown", slideStart);
+            var tempEventDataUp = JSON.parse(tempData[0]);
+            var tempEventDataDown = JSON.parse(tempData[0]);
+            tempEventDataUp["payload"]["targetState"]="[up]";
+            tempEventDataDown["payload"]["targetState"]="[down]";
+            omega.ApplyHandlerMouseWheel({targetElement:tempElement,funcUp:function (){top.Request(JSON.stringify({'method':'TriggerEvent','kwargs':tempEventDataUp}))},funcDown:function (){top.Request(JSON.stringify({'method':'TriggerEvent','kwargs':tempEventDataDown}))}});
         }
       }
     }
@@ -211,10 +217,11 @@ function buttonPrinter(i){
 var windowWidth=0;
 var windowHeight=0;
 
-function getWindowSize(){
+function getWindowSize(force){
+  force = force || false;
   var windowWidthNew=parseInt(top.$(window).width());
   var windowHeightNew=parseInt(top.$(window).height());
-  if (windowWidth!=windowWidthNew || windowHeight!=windowHeightNew){
+  if (force || windowWidth!=windowWidthNew || windowHeight!=windowHeightNew){
     windowWidth=windowWidthNew;
     windowHeight=windowHeightNew;
     dashboardPrinter();
@@ -264,8 +271,12 @@ function runExecute(o){
 function editDash(onOff){
   dragStarted=false;
   if (onOff){
-    top.dashEditing=true;
     top.viewRecording=top.viewChoosen;
+    if (!top.dashEditing){
+        top.dashEditing=true;
+        top.loadedFiles=["dashboard"];
+        top.indexReload("reload");
+    }
     document.getElementById('editB').innerHTML='<button class="p1 w1 red" onClick="editDash(0);"><img src="/img/pen.gif"/></button>';
     muellElement.innerHTML='<button class="p1 w1 transparent1NH" onClick="omega.ShowAlertBox({text:\'You need to drag the element you want to delete over this field!\',selectedObject:this});"><img src="/img/muell.gif"/></button>';
   }
@@ -275,12 +286,13 @@ function editDash(onOff){
       top.userSettings1["dashData"][top.viewChoosen]=dashData;
       top.saveUserSettings(false);
       top.dashEditing=false;
-      dashboardPrinter();
+      top.loadedFiles=["dashboard"];
+      top.indexReload("reload");
     }
     document.getElementById('editB').innerHTML='<button class="p1 w1 default" onClick="editDash(1);"><img src="/img/pen.gif"/></button>';
     muellElement.innerHTML='';
   }
-  tilePrinter();
+  //tilePrinter();
 }
 
 //---------------------dragNdropStart------------------------------//
@@ -525,14 +537,8 @@ function move(event){
 omega.OnUpdate(function(ext){
     if (ext=="reload" || ext=="load"){
         dashData=top.userSettings["dashData"][top.viewChoosen]||[];
-        if (ext=="load"){
-          getWindowSize();
-        }
-        dashboardPrinter();
-        if (top.userSettings["lockDashboard"]){
-            tilePrinter();
-        }
-        else{
+        getWindowSize(true);
+        if (!top.userSettings["lockDashboard"]){
             editDash(top.dashEditing && top.viewChoosen==top.viewRecording);
         }
     }
